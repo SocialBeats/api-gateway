@@ -58,7 +58,9 @@ app.use('/api', rateLimiter);
 // 4. AUTENTICACIÓN
 // ============================================
 
-app.use('/api', authenticateRequest);
+//TODO: HABILITAR AUTENTICACIÓN PARA RUTAS ABIERTAS
+
+// app.use('/api', authenticateRequest);
 
 // ============================================
 // 5. RUTAS DE PROXY

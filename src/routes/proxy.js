@@ -16,7 +16,24 @@ export const setupProxyRoutes = (app) => {
         '^/api/v1/auth': '/api/v1/auth',
       },
       onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to Auth Service: ${req.method} ${req.path}`);
+        logger.debug(`Proxying to Users Service: ${req.method} ${req.path}`);
+        // IMPORTANTE: Si hay body en la petición (POST/PUT), hay que volver a escribirlo
+        // porque el middleware 'express.json()' ya lo ha consumido.
+        if (req.body) {
+          const bodyData = JSON.stringify(req.body);
+
+          // 1. Asegurarse que los headers de contenido son correctos
+          proxyReq.setHeader('Content-Type', 'application/json');
+          proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+
+          // 2. Escribir el cuerpo en el stream de la petición de proxy
+          proxyReq.write(bodyData);
+          proxyReq.end(); // Terminar el stream de la petición
+        }
+        logger.debug(`Proxy Headers: ${JSON.stringify(req.headers)}`);
+        logger.debug(`Proxy Body: ${JSON.stringify(req.body)}`);
+        logger.debug(`Proxy Query: ${JSON.stringify(req.query)}`);
+        logger.debug(`Proxy Params: ${req.originalUrl}`);
       },
       onError: (err, req, res) => {
         logger.error(`Proxy error (Auth Service): ${err.message}`);
