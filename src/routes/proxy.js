@@ -35,6 +35,11 @@ export const setupProxyRoutes = (app) => {
         logger.debug(`Proxy Query: ${JSON.stringify(req.query)}`);
         logger.debug(`Proxy Params: ${req.originalUrl}`);
       },
+      onProxyRes: (proxyRes, req, res) => {
+        // Asegurar que los headers CORS se pasen correctamente
+        proxyRes.headers['Access-Control-Allow-Origin'] = req.headers.origin || '*';
+        proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+      },
       onError: (err, req, res) => {
         logger.error(`Proxy error (Auth Service): ${err.message}`);
         res.status(503).json({
