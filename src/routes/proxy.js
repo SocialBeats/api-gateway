@@ -6,24 +6,24 @@ import logger from '../../logger.js';
  * Configurar rutas de proxy a microservicios
  */
 export const setupProxyRoutes = (app) => {
-  // Proxy a servicio de usuarios
+  // Proxy a servicio de autenticación
   app.use(
-    '/api/v1/users',
+    '/api/v1/auth',
     createProxyMiddleware({
-      target: services.users.url,
+      target: services.auth.url,
       changeOrigin: true,
       pathRewrite: {
-        '^/api/v1/users': '/api/v1/users',
+        '^/api/v1/auth': '/api/v1/auth',
       },
       onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to Users Service: ${req.method} ${req.path}`);
+        logger.debug(`Proxying to Auth Service: ${req.method} ${req.path}`);
       },
       onError: (err, req, res) => {
-        logger.error(`Proxy error (Users Service): ${err.message}`);
+        logger.error(`Proxy error (Auth Service): ${err.message}`);
         res.status(503).json({
           error: 'Service unavailable',
-          service: 'users',
-          message: 'Unable to reach users service',
+          service: 'auth',
+          message: 'Unable to reach auth service',
         });
       },
     })

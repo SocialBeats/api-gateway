@@ -1,6 +1,6 @@
 export const services = {
-  users: {
-    url: process.env.USERS_SERVICE_URL || 'http://localhost:3001',
+  auth: {
+    url: process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
     timeout: 5000,
   },
   payments: {
