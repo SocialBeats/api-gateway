@@ -10,7 +10,7 @@
     "env:docker": "node scripts/copyEnv.cjs docker",
     "env:compose": "node scripts/copyEnv.cjs compose",
     "dev:local": "npm run env:local && npm run start",
-    "dev:compose": "npm run env:compose && docker-compose up --build",
+    "dev:compose": "docker-compose up --build",
     "dev:docker": "npm run env:docker && npm run docker:build && npm run docker:run",
     "docker:build": "docker build -t api-gateway .",
     "docker:run": "docker run -it --rm --name api-gateway-app -p 3000:3000 --add-host=host.docker.internal:host-gateway --env-file .env api-gateway",
