@@ -1,3 +1,10 @@
+/**
+ * Configuración de los microservicios.
+ *
+ * IMPORTANTE: Para registrar un nuevo servicio:
+ * 1. Añade la entrada correspondiente en este objeto `services`.
+ * 2. Asegúrate de leer la URL desde las variables de entorno (.env), definiendo un fallback para desarrollo local.
+ */
 export const services = {
   users: {
     url: process.env.USERS_SERVICE_URL || 'http://localhost:3001',
