@@ -1,4 +1,5 @@
 import logger from '../../logger.js';
+import { sendError } from './response.js';
 
 export const errorHandler = (err, req, res, next) => {
   logger.error('Unhandled error:', {
@@ -8,14 +9,10 @@ export const errorHandler = (err, req, res, next) => {
     method: req.method,
   });
 
-  const errorResponse = {
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message,
-  };
+  const statusCode = err.status || 500;
+  const message =
+    process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message;
 
-  if (process.env.NODE_ENV !== 'production') {
-    errorResponse.stack = err.stack;
-  }
-
-  res.status(err.status || 500).json(errorResponse);
+  // 500 Internal Server Error (u otro código): Manejador global de errores.
+  sendError(res, message, statusCode, err.stack);
 };

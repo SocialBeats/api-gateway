@@ -2,6 +2,7 @@ import rateLimit from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
 import { createClient } from 'redis';
 import logger from '../../logger.js';
+import { sendError } from '../utils/response.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -28,11 +29,12 @@ let redisClient;
 })();
 
 /**
- * Rate Limiter con límites basados en plan de precios
- * Patrón 2: Throttling/Rate Limiting Pattern
+ * Rate Limiter con límites basados en plan de precios.
+ * Patrón: Throttling/Rate Limiting Pattern
  *
  * Implementa límites de uso según el plan de precios del usuario.
- * Cumple con el requisito: "límites de uso según su plan de precios"
+ *
+ * @returns {import('express').RequestHandler} Middleware de rate limiting
  */
 export const createRateLimiter = () => {
   const limiterConfig = {
@@ -72,11 +74,9 @@ export const createRateLimiter = () => {
       const plan = req.user?.pricingPlan || 'free';
       logger.warn(`Rate limit exceeded for user: ${req.user?.userId} (plan: ${plan})`);
 
-      res.status(429).json({
-        error: 'Too many requests',
-        message: `Rate limit exceeded for ${plan} plan`,
+      // 429 Too Many Requests: The user has sent too many requests in a given amount of time.
+      sendError(res, `Rate limit exceeded for ${plan} plan. Upgrade for higher limits.`, 429, {
         currentPlan: plan,
-        upgradeInfo: 'Upgrade your plan for higher limits',
         retryAfter: res.getHeader('Retry-After'),
       });
     },
@@ -99,7 +99,9 @@ export const createRateLimiter = () => {
 };
 
 /**
- * Rate Limiter específico para endpoints sensibles (login, registro)
+ * Rate Limiter específico para endpoints sensibles (login, registro).
+ *
+ * @type {import('express').RequestHandler}
  */
 export const strictRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -107,6 +109,10 @@ export const strictRateLimiter = rateLimit({
   message: {
     error: 'Too many attempts',
     message: 'Please try again later',
+  },
+  handler: (req, res) => {
+    // 429 Too Many Requests
+    sendError(res, 'Too many attempts. Please try again later.', 429);
   },
   standardHeaders: true,
   legacyHeaders: false,

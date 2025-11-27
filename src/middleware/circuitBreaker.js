@@ -3,8 +3,10 @@ import axios from 'axios';
 import logger from '../../logger.js';
 
 /**
- * Circuit Breaker Pattern
- * Patrón 4: Resiliencia - Evita sobrecargar servicios que están fallando
+ * Circuit Breaker Pattern.
+ * Patrón: Resiliencia - Evita sobrecargar servicios que están fallando.
+ *
+ * Utiliza la librería 'opossum' para envolver las llamadas HTTP.
  */
 
 const breakerOptions = {
@@ -20,7 +22,11 @@ const breakerOptions = {
 const breakers = new Map();
 
 /**
- * Crear o obtener circuit breaker para un servicio
+ * Crear o obtener circuit breaker para un servicio.
+ *
+ * @param {string} serviceName - Nombre del servicio
+ * @param {string} serviceUrl - URL base del servicio
+ * @returns {CircuitBreaker} Instancia del circuit breaker
  */
 export const getCircuitBreaker = (serviceName, serviceUrl) => {
   if (breakers.has(serviceName)) {
@@ -82,7 +88,12 @@ export const getCircuitBreaker = (serviceName, serviceUrl) => {
 };
 
 /**
- * Hacer petición HTTP protegida por circuit breaker
+ * Hacer petición HTTP protegida por circuit breaker.
+ *
+ * @param {string} serviceName - Nombre del servicio destino
+ * @param {string} serviceUrl - URL base del servicio
+ * @param {import('axios').AxiosRequestConfig} config - Configuración de la petición axios
+ * @returns {Promise<import('axios').AxiosResponse>} Respuesta de axios
  */
 export const protectedRequest = async (serviceName, serviceUrl, config) => {
   const breaker = getCircuitBreaker(serviceName, serviceUrl);
@@ -100,7 +111,10 @@ export const protectedRequest = async (serviceName, serviceUrl, config) => {
 };
 
 /**
- * Obtener estadísticas de circuit breakers
+ * Obtener estadísticas de circuit breakers.
+ * Útil para monitoreo y dashboards de administración.
+ *
+ * @returns {Object} Estadísticas de todos los circuit breakers
  */
 export const getCircuitBreakerStats = () => {
   const stats = {};

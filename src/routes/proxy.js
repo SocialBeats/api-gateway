@@ -1,102 +1,84 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { services } from '../config/services.js';
 import logger from '../../logger.js';
+import { sendError } from '../utils/response.js';
 
 /**
- * Configurar rutas de proxy a microservicios
+ * Función factory para crear un proxy de servicio con configuración estándar.
+ *
+ * @param {Object} app - Instancia de aplicación Express
+ * @param {string} route - La ruta base para el proxy (ej: '/api/v1/users')
+ * @param {string} target - La URL destino del microservicio
+ * @param {string} serviceName - El nombre del servicio para logging
+ */
+const createServiceProxy = (app, route, target, serviceName) => {
+  app.use(
+    route,
+    createProxyMiddleware({
+      target,
+      changeOrigin: true,
+      pathRewrite: {
+        [`^${route}`]: route,
+      },
+      onProxyReq: (proxyReq, req) => {
+        logger.debug(`Proxying to ${serviceName} Service: ${req.method} ${req.path}`);
+
+        // IMPORTANTE: Si hay body en la petición (POST/PUT), hay que volver a escribirlo
+        // porque el middleware 'express.json()' ya lo ha consumido.
+        if (req.body && Object.keys(req.body).length > 0) {
+          const bodyData = JSON.stringify(req.body);
+
+          // 1. Asegurarse que los headers de contenido son correctos
+          proxyReq.setHeader('Content-Type', 'application/json');
+          proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+
+          // 2. Escribir el cuerpo en el stream de la petición de proxy
+          proxyReq.write(bodyData);
+          proxyReq.end(); // Terminar el stream de la petición
+        }
+
+        logger.debug(`Proxy Headers: ${JSON.stringify(req.headers)}`);
+        if (req.body) logger.debug(`Proxy Body: ${JSON.stringify(req.body)}`);
+        logger.debug(`Proxy Query: ${JSON.stringify(req.query)}`);
+        logger.debug(`Proxy Params: ${req.originalUrl}`);
+      },
+      onProxyRes: (proxyRes, req, res) => {
+        // Asegurar que los headers CORS se pasen correctamente
+        proxyRes.headers['Access-Control-Allow-Origin'] = req.headers.origin || '*';
+        proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+      },
+      onError: (err, req, res) => {
+        logger.error(`Proxy error (${serviceName} Service): ${err.message}`);
+        // 503 Service Unavailable: El servidor actualmente no puede manejar la petición debido a sobrecarga temporal o mantenimiento programado.
+        sendError(
+          res,
+          `Service unavailable. Unable to reach ${serviceName.toLowerCase()} service.`,
+          503,
+          {
+            service: serviceName.toLowerCase(),
+            originalError: err.message,
+          }
+        );
+      },
+    })
+  );
+};
+
+/**
+ * Configurar rutas de proxy a microservicios.
  */
 export const setupProxyRoutes = (app) => {
   // Proxy a servicio de usuarios
-  app.use(
-    '/api/v1/users',
-    createProxyMiddleware({
-      target: services.users.url,
-      changeOrigin: true,
-      pathRewrite: {
-        '^/api/v1/users': '/api/v1/users',
-      },
-      onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to Users Service: ${req.method} ${req.path}`);
-      },
-      onError: (err, req, res) => {
-        logger.error(`Proxy error (Users Service): ${err.message}`);
-        res.status(503).json({
-          error: 'Service unavailable',
-          service: 'users',
-          message: 'Unable to reach users service',
-        });
-      },
-    })
-  );
+  createServiceProxy(app, '/api/v1/users', services.users.url, 'Users');
 
   // Proxy a servicio de pagos
-  app.use(
-    '/api/v1/payments',
-    createProxyMiddleware({
-      target: services.payments.url,
-      changeOrigin: true,
-      pathRewrite: {
-        '^/api/v1/payments': '/api/v1/payments',
-      },
-      onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to Payments Service: ${req.method} ${req.path}`);
-      },
-      onError: (err, req, res) => {
-        logger.error(`Proxy error (Payments Service): ${err.message}`);
-        res.status(503).json({
-          error: 'Service unavailable',
-          service: 'payments',
-          message: 'Unable to reach payments service',
-        });
-      },
-    })
-  );
+  createServiceProxy(app, '/api/v1/payments', services.payments.url, 'Payments');
 
   // Proxy a servicio de analytics
-  app.use(
-    '/api/v1/analytics',
-    createProxyMiddleware({
-      target: services.analytics.url,
-      changeOrigin: true,
-      pathRewrite: {
-        '^/api/v1/analytics': '/api/v1/analytics',
-      },
-      onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to Analytics Service: ${req.method} ${req.path}`);
-      },
-      onError: (err, req, res) => {
-        logger.error(`Proxy error (Analytics Service): ${err.message}`);
-        res.status(503).json({
-          error: 'Service unavailable',
-          service: 'analytics',
-          message: 'Unable to reach analytics service',
-        });
-      },
-    })
-  );
+  createServiceProxy(app, '/api/v1/analytics', services.analytics.url, 'Analytics');
 
   // Proxy a servicio de notificaciones
-  app.use(
-    '/api/v1/notifications',
-    createProxyMiddleware({
-      target: services.notifications.url,
-      changeOrigin: true,
-      pathRewrite: {
-        '^/api/v1/notifications': '/api/v1/notifications',
-      },
-      onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to Notifications Service: ${req.method} ${req.path}`);
-      },
-      onError: (err, req, res) => {
-        logger.error(`Proxy error (Notifications Service): ${err.message}`);
-        res.status(503).json({
-          error: 'Service unavailable',
-          service: 'notifications',
-          message: 'Unable to reach notifications service',
-        });
-      },
-    })
-  );
+  createServiceProxy(app, '/api/v1/notifications', services.notifications.url, 'Notifications');
 
   logger.info('✅ Proxy routes configured');
 };

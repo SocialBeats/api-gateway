@@ -1,14 +1,24 @@
 import jwt from 'jsonwebtoken';
 import logger from '../../logger.js';
+import { sendError } from '../utils/response.js';
+
+// En producción, es CRÍTICO que JWT_SECRET esté definido.
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET is not defined in production environment');
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 /**
- * Middleware de autenticación centralizada
- * Patrón 1: API Gateway Pattern - Centralized Authentication
+ * Middleware de autenticación centralizada.
+ * Patrón: API Gateway Pattern - Centralized Authentication
  *
  * Valida el token JWT y enriquece la petición con información del usuario
  * antes de enviarla a los microservicios.
+ *
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @param {import('express').NextFunction} next - Express next function
  */
 export const authenticateRequest = (req, res, next) => {
   // Obtener token del header Authorization
@@ -16,10 +26,8 @@ export const authenticateRequest = (req, res, next) => {
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logger.warn(`Authentication failed: No token provided for ${req.path}`);
-    return res.status(401).json({
-      error: 'Authentication required',
-      message: 'No token provided',
-    });
+    // 401 Unauthorized: Authentication is required and has failed or has not been yet provided.
+    return sendError(res, 'Authentication required. No token provided.', 401);
   }
 
   const token = authHeader.replace('Bearer ', '');
@@ -29,14 +37,12 @@ export const authenticateRequest = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     // Enriquecer headers para los microservicios
-    // Los microservicios ya NO necesitan validar el token
+    // Los microservicios ya NO necesitan validar el token, confían en el Gateway.
+    logger.debug(`Token decoded: ${JSON.stringify(decoded)}`);
     req.headers['x-user-id'] = decoded.userId || decoded.id;
-    req.headers['x-user-email'] = decoded.email;
-    req.headers['x-user-role'] = decoded.role || 'user';
-    req.headers['x-pricing-plan'] = decoded.pricingPlan || 'free';
     req.headers['x-gateway-authenticated'] = 'true';
 
-    // Guardar usuario en request para uso interno del gateway
+    // Guardar usuario en request para uso interno del gateway (ej: rate limiter)
     req.user = decoded;
 
     logger.debug(`User authenticated: ${decoded.userId} (${decoded.role})`);
@@ -45,28 +51,26 @@ export const authenticateRequest = (req, res, next) => {
     logger.warn(`Authentication failed: ${error.message}`);
 
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        error: 'Token expired',
-        message: 'Please login again',
-      });
+      // 401 Unauthorized: Token expired is an authentication failure.
+      return sendError(res, 'Token expired. Please login again.', 401);
     }
 
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        error: 'Invalid token',
-        message: 'Token verification failed',
-      });
+      // 401 Unauthorized: Invalid token signature or structure.
+      return sendError(res, 'Invalid token. Verification failed.', 401);
     }
 
-    return res.status(401).json({
-      error: 'Authentication failed',
-      message: error.message,
-    });
+    // 401 Unauthorized: Generic authentication failure.
+    return sendError(res, 'Authentication failed.', 401, error.message);
   }
 };
 
 /**
- * Función auxiliar para generar tokens (útil para testing)
+ * Función auxiliar para generar tokens (útil para testing).
+ *
+ * @param {Object} payload - Datos a incluir en el token
+ * @param {string} expiresIn - Tiempo de expiración (ej: '24h')
+ * @returns {string} Token JWT firmado
  */
 export const generateToken = (payload, expiresIn = '24h') => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });

@@ -11,10 +11,22 @@ import { createRateLimiter } from './src/middleware/rateLimiter.js';
 import { setupProxyRoutes } from './src/routes/proxy.js';
 import { setupAggregationRoutes } from './src/routes/aggregation.js';
 import { errorHandler } from './src/utils/errorHandler.js';
+import { corsOptions } from './src/config/cors.js';
+import { sendSuccess } from './src/utils/response.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
+
+/**
+ * Variables de entorno críticas.
+ *
+ * @env PORT - Puerto del servidor (default: 3000)
+ * @env NODE_ENV - Entorno (development, production, test)
+ * @env ALLOWED_ORIGINS - Lista de orígenes permitidos separados por comas (prod)
+ * @env JWT_SECRET - Secreto para firmar tokens
+ * @env REDIS_URL - URL de conexión a Redis
+ */
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,14 +35,17 @@ const PORT = process.env.PORT || 3000;
 // 1. MIDDLEWARES GLOBALES
 // ============================================
 
+// Helmet: Protege la app configurando varios headers HTTP seguros.
 app.use(helmet());
+
+// Compression: Comprime las respuestas HTTP (gzip) para mejorar la velocidad.
 app.use(compression());
-app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    credentials: true,
-  })
-);
+
+// CORS: Configuración de seguridad para orígenes cruzados.
+app.use(cors(corsOptions));
+
+// Parsing del body.
+// NOTA: Esto puede causar problemas con proxies si no se maneja en onProxyReq (ver src/routes/proxy.js).
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -38,27 +53,53 @@ app.use(express.urlencoded({ extended: true }));
 // 2. HEALTH CHECK
 // ============================================
 
+/**
+ * Endpoint de salud para monitoreo (k8s, load balancers).
+ */
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-  });
+  logger.info('Health check requested');
+  sendSuccess(
+    res,
+    {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+    },
+    'Gateway is healthy'
+  );
 });
 
 // ============================================
-// 3. RATE LIMITING
+// 3. AUTENTICACIÓN
 // ============================================
 
+/**
+ * Middleware de autenticación global.
+ *
+ * Rutas públicas: Se definen explícitamente para saltar la validación de token.
+ * Todas las demás rutas requieren un token JWT válido.
+ */
+const publicPaths = ['/v1/users/register', '/v1/users/login', '/v1/users/forgot-password'];
+
+app.use('/api', (req, res, next) => {
+  // Verificar si la ruta es pública
+  if (publicPaths.includes(req.path)) {
+    return next();
+  }
+
+  // Aplicar autenticación
+  authenticateRequest(req, res, next);
+});
+
+// ============================================
+// 4. RATE LIMITING
+// ============================================
+
+// Se aplica DESPUÉS de la autenticación para tener acceso a req.user
+// y poder aplicar límites basados en el plan de precios.
 const rateLimiter = createRateLimiter();
 app.use('/api', rateLimiter);
-
-// ============================================
-// 4. AUTENTICACIÓN
-// ============================================
-
-app.use('/api', authenticateRequest);
 
 // ============================================
 // 5. RUTAS DE PROXY
@@ -101,14 +142,12 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Manejo de shutdown graceful
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
+const gracefulShutdown = (signal) => {
+  logger.info(`${signal} signal received: closing HTTP server`);
   process.exit(0);
-});
+};
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT signal received: closing HTTP server');
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;
