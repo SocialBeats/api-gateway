@@ -1,106 +1,68 @@
 import { Router } from 'express';
-import { protectedRequest, getCircuitBreakerStats } from '../middleware/circuitBreaker.js';
-import { services } from '../config/services.js';
+import { getCircuitBreakerStats } from '../middleware/circuitBreaker.js';
+import { AggregationService } from '../services/aggregationService.js';
+import { authorize } from '../middleware/authorization.js';
 import logger from '../../logger.js';
+import { sendSuccess, sendError } from '../utils/response.js';
 
 const router = Router();
 
 /**
- * Gateway Aggregation Pattern (Patrón 3)
+ * Gateway Aggregation Pattern.
+ *
+ * Este módulo implementa endpoints que agregan información de múltiples microservicios
+ * en una sola respuesta. Esto reduce el "chatiness" entre el cliente y el backend.
+ *
+ * Útil para:
+ * - Dashboards
+ * - Vistas de detalle complejas
+ * - Reportes
  */
 
 /**
  * GET /api/v1/dashboard
- * Obtiene dashboard completo del usuario
+ * Obtiene dashboard completo del usuario.
+ *
+ * Agrega datos de:
+ * - Users Service (Perfil)
+ * - Payments Service (Pagos recientes)
+ * - Analytics Service (Estadísticas)
+ *
+ * @param {import('express').Request} req - Objeto request de Express
+ * @param {import('express').Response} res - Objeto response de Express
  */
 router.get('/dashboard', async (req, res) => {
   const userId = req.user.userId;
-  const startTime = Date.now();
 
   try {
-    logger.info(`Aggregating dashboard data for user ${userId}`);
+    // Delegamos la lógica de negocio al servicio
+    const aggregatedData = await AggregationService.getDashboardData(userId);
 
-    const [profileResponse, paymentsResponse, analyticsResponse] = await Promise.all([
-      protectedRequest('users', services.users.url, {
-        method: 'GET',
-        url: `/api/v1/users/${userId}`,
-        headers: {
-          'x-user-id': userId,
-          'x-gateway-authenticated': 'true',
-        },
-      }).catch((err) => {
-        logger.warn(`Failed to fetch profile: ${err.message}`);
-        return { data: null, error: 'Profile service unavailable' };
-      }),
-
-      protectedRequest('payments', services.payments.url, {
-        method: 'GET',
-        url: `/api/v1/payments/users/${userId}/recent`,
-        headers: {
-          'x-user-id': userId,
-          'x-gateway-authenticated': 'true',
-        },
-      }).catch((err) => {
-        logger.warn(`Failed to fetch payments: ${err.message}`);
-        return { data: [], error: 'Payments service unavailable' };
-      }),
-
-      protectedRequest('analytics', services.analytics.url, {
-        method: 'GET',
-        url: `/api/v1/analytics/users/${userId}/stats`,
-        headers: {
-          'x-user-id': userId,
-          'x-gateway-authenticated': 'true',
-        },
-      }).catch((err) => {
-        logger.warn(`Failed to fetch analytics: ${err.message}`);
-        return { data: null, error: 'Analytics service unavailable' };
-      }),
-    ]);
-
-    const duration = Date.now() - startTime;
-
-    const aggregatedData = {
-      profile: profileResponse.data,
-      payments: paymentsResponse.data,
-      analytics: analyticsResponse.data,
-      metadata: {
-        aggregationTime: `${duration}ms`,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    logger.info(`Dashboard aggregation completed in ${duration}ms for user ${userId}`);
-    res.json(aggregatedData);
+    // 200 OK: Respuesta de éxito estándar.
+    sendSuccess(res, aggregatedData, 'Dashboard data retrieved successfully');
   } catch (error) {
     logger.error(`Dashboard aggregation failed: ${error.message}`);
-    res.status(500).json({
-      error: 'Failed to aggregate dashboard data',
-      message: error.message,
-    });
+    // 500 Internal Server Error: Fallo inesperado durante la agregación.
+    sendError(res, 'Failed to aggregate dashboard data', 500, error.message);
   }
 });
 
 /**
  * GET /api/v1/circuit-breaker-stats
- * Endpoint administrativo
+ * Endpoint administrativo para ver el estado de los circuit breakers.
+ * Requiere rol 'admin'.
  */
-router.get('/circuit-breaker-stats', (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      error: 'Forbidden',
-      message: 'Admin access required',
-    });
-  }
-
+router.get('/circuit-breaker-stats', authorize(['admin']), (req, res) => {
   const stats = getCircuitBreakerStats();
 
-  res.json({
-    circuitBreakers: stats,
-    timestamp: new Date().toISOString(),
-  });
+  // 200 OK: Respuesta de éxito estándar.
+  sendSuccess(res, { circuitBreakers: stats }, 'Circuit breaker stats retrieved');
 });
 
+/**
+ * Configura las rutas de agregación en la aplicación.
+ * @param {import('express').Application} app - Aplicación Express
+ */
 export const setupAggregationRoutes = (app) => {
   app.use('/api/v1', router);
   logger.info('✅ Aggregation routes configured');
