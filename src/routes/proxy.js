@@ -2,6 +2,13 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { services } from '../config/services.js';
 import logger from '../../logger.js';
 import { sendError } from '../utils/response.js';
+import {
+  HEADER_CONTENT_TYPE,
+  HEADER_CONTENT_LENGTH,
+  HEADER_ACCESS_CONTROL_ALLOW_ORIGIN,
+  HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS,
+  CONTENT_TYPE_JSON,
+} from '../config/constants.js';
 
 /**
  * Función factory para crear un proxy de servicio con configuración estándar.
@@ -29,8 +36,8 @@ const createServiceProxy = (app, route, target, serviceName) => {
           const bodyData = JSON.stringify(req.body);
 
           // 1. Asegurarse que los headers de contenido son correctos
-          proxyReq.setHeader('Content-Type', 'application/json');
-          proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+          proxyReq.setHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
+          proxyReq.setHeader(HEADER_CONTENT_LENGTH, Buffer.byteLength(bodyData));
 
           // 2. Escribir el cuerpo en el stream de la petición de proxy
           proxyReq.write(bodyData);
@@ -44,8 +51,8 @@ const createServiceProxy = (app, route, target, serviceName) => {
       },
       onProxyRes: (proxyRes, req, res) => {
         // Asegurar que los headers CORS se pasen correctamente
-        proxyRes.headers['Access-Control-Allow-Origin'] = req.headers.origin || '*';
-        proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+        proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_ORIGIN] = req.headers.origin || '*';
+        proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS] = 'true';
       },
       onError: (err, req, res) => {
         logger.error(`Proxy error (${serviceName} Service): ${err.message}`);
