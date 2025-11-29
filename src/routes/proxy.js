@@ -76,7 +76,7 @@ const createServiceProxy = (app, route, target, serviceName) => {
  */
 export const setupProxyRoutes = (app) => {
   // Proxy a servicio de usuarios
-  createServiceProxy(app, '/api/v1/users', services.users.url, 'Users');
+  createServiceProxy(app, '/api/v1/auth', services.users.url, 'Users');
 
   // Proxy a servicio de pagos
   createServiceProxy(app, '/api/v1/payments', services.payments.url, 'Payments');
