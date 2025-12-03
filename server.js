@@ -80,11 +80,31 @@ app.get('/health', (req, res) => {
  * Rutas públicas: Se definen explícitamente para saltar la validación de token.
  * Todas las demás rutas requieren un token JWT válido.
  */
-const publicPaths = ['/v1/users/register', '/v1/users/login', '/v1/users/forgot-password'];
+const publicPaths = [
+  '/v1/users/register',
+  '/v1/users/login',
+  '/v1/users/forgot-password',
+  '/v1/beats',
+  '/v1/beats/upload-url',
+  '/v1/beats/:id',
+];
 
 app.use('/api', (req, res, next) => {
   // Verificar si la ruta es pública
-  if (publicPaths.includes(req.path)) {
+  // Se usa .some() para verificar si la ruta actual COMIENZA con alguna de las rutas públicas
+  // o coincide con patrones dinámicos
+  const isPublic = publicPaths.some((path) => {
+    // Si el path tiene parámetros (ej: :id), convertimos a regex simple
+    if (path.includes(':')) {
+      const regexPath = path.replace(/:[^\s/]+/g, '[^/]+');
+      const regex = new RegExp(`^${regexPath}$`);
+      return regex.test(req.path);
+    }
+    // Para rutas estáticas, coincidencia exacta o prefijo
+    return req.path === path || req.path.startsWith(path + '/');
+  });
+
+  if (isPublic) {
     return next();
   }
 
