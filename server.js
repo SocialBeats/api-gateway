@@ -84,7 +84,20 @@ const publicPaths = ['/v1/auth/register', '/v1/auth/login', '/v1/auth/refresh', 
 
 app.use('/api', (req, res, next) => {
   // Verificar si la ruta es pública
-  if (publicPaths.includes(req.path)) {
+  // Se usa .some() para verificar si la ruta actual COMIENZA con alguna de las rutas públicas
+  // o coincide con patrones dinámicos
+  const isPublic = publicPaths.some((path) => {
+    // Si el path tiene parámetros (ej: :id), convertimos a regex simple
+    if (path.includes(':')) {
+      const regexPath = path.replace(/:[^\s/]+/g, '[^/]+');
+      const regex = new RegExp(`^${regexPath}$`);
+      return regex.test(req.path);
+    }
+    // Para rutas estáticas, coincidencia exacta o prefijo
+    return req.path === path || req.path.startsWith(path + '/');
+  });
+
+  if (isPublic) {
     return next();
   }
 

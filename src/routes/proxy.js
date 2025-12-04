@@ -90,5 +90,8 @@ export const setupProxyRoutes = (app) => {
   // Proxy a servicio de notificaciones
   createServiceProxy(app, '/api/v1/notifications', services.notifications.url, 'Notifications');
 
+  // Proxy a servicio de beats
+  createServiceProxy(app, '/api/v1/beats', services.beats.url, 'Beats');
+
   logger.info('✅ Proxy routes configured');
 };

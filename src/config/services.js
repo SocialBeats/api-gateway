@@ -22,6 +22,10 @@ export const services = {
     url: process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3004',
     timeout: 3000,
   },
+  beats: {
+    url: process.env.BEATS_SERVICE_URL || 'http://localhost:3005',
+    timeout: 5000,
+  },
 };
 
 export const getServiceUrl = (serviceName) => {
