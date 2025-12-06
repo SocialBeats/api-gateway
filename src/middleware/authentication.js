@@ -5,6 +5,7 @@ import { validateTokenWithAuthService } from '../services/tokenValidationService
 import {
   HEADER_USER_ID,
   HEADER_ROLES,
+  HEADER_USERNAME,
   HEADER_GATEWAY_AUTHENTICATED,
   AUTH_BEARER_PREFIX,
   ENV_PRODUCTION,
@@ -67,7 +68,7 @@ export const authenticateRequest = async (req, res, next) => {
     // Enriquecer headers para los microservicios
     req.headers[HEADER_USER_ID] = userData.id;
     req.headers[HEADER_GATEWAY_AUTHENTICATED] = 'true';
-    req.headers['x-username'] = userData.username;
+    req.headers[HEADER_USERNAME] = userData.username;
 
     if (userData.roles) {
       req.headers[HEADER_ROLES] = Array.isArray(userData.roles)
