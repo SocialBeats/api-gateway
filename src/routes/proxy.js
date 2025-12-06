@@ -81,6 +81,9 @@ export const setupProxyRoutes = (app) => {
   // Proxy a servicio de admin
   createServiceProxy(app, '/api/v1/admin', services.users.url, 'Admins');
 
+  //Proxy a servicio de perfiles
+  createServiceProxy(app, '/api/v1/profile', services.users.url, 'Profiles');
+
   // Proxy a servicio de pagos
   createServiceProxy(app, '/api/v1/payments', services.payments.url, 'Payments');
 
