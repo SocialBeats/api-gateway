@@ -75,6 +75,10 @@ export const authenticateRequest = async (req, res, next) => {
         : userData.roles;
     }
 
+    logger.info(
+      `User authenticated: ${userData.id} (${userData.username}) with roles: ${req.headers[HEADER_ROLES]}`
+    );
+
     // Guardar usuario en request para uso interno del gateway (ej: rate limiter)
     req.user = userData;
 
