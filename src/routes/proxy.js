@@ -30,6 +30,22 @@ const createServiceProxy = (app, route, target, serviceName) => {
       onProxyReq: (proxyReq, req) => {
         logger.debug(`Proxying to ${serviceName} Service: ${req.method} ${req.path}`);
 
+        // Asegurar que los headers de autenticación se pasen al microservicio
+        const authHeaders = [
+          'x-gateway-authenticated',
+          'x-user-id',
+          'x-roles',
+          'x-username',
+          'x-user-pricing-plan',
+        ];
+
+        authHeaders.forEach((header) => {
+          if (req.headers[header]) {
+            proxyReq.setHeader(header, req.headers[header]);
+            logger.debug(`Setting header ${header}: ${req.headers[header]}`);
+          }
+        });
+
         // IMPORTANTE: Si hay body en la petición (POST/PUT), hay que volver a escribirlo
         // porque el middleware 'express.json()' ya lo ha consumido.
         if (req.body && Object.keys(req.body).length > 0) {
@@ -41,7 +57,6 @@ const createServiceProxy = (app, route, target, serviceName) => {
 
           // 2. Escribir el cuerpo en el stream de la petición de proxy
           proxyReq.write(bodyData);
-          proxyReq.end(); // Terminar el stream de la petición
         }
 
         logger.debug(`Proxy Headers: ${JSON.stringify(req.headers)}`);
