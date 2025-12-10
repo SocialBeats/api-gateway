@@ -5,6 +5,7 @@
 
 export const HEADER_USER_ID = 'x-user-id';
 export const HEADER_ROLES = 'x-roles';
+export const HEADER_USERNAME = 'x-username';
 export const HEADER_GATEWAY_AUTHENTICATED = 'x-gateway-authenticated';
 
 // Cabeceras HTTP
