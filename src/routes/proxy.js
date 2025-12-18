@@ -17,18 +17,25 @@ import {
  * @param {string} route - La ruta base para el proxy (ej: '/api/v1/users')
  * @param {string} target - La URL destino del microservicio
  * @param {string} serviceName - El nombre del servicio para logging
+ * @param {Object} pathRewrite - Reglas opcionales de reescritura de path
  */
-const createServiceProxy = (app, route, target, serviceName) => {
+const createServiceProxy = (
+  app,
+  route,
+  target,
+  serviceName,
+  pathRewrite = {
+    [`^${route}`]: route,
+  }
+) => {
   app.use(
     route,
     createProxyMiddleware({
       target,
       changeOrigin: true,
-      pathRewrite: {
-        [`^${route}`]: route,
-      },
+      pathRewrite,
       onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to ${serviceName} Service: ${req.method} ${req.path}`);
+        logger.debug(`Proxying to ${serviceName} Service: ${req.method} ${req.originalUrl}`);
 
         // Asegurar que los headers de autenticación se pasen al microservicio
         const authHeaders = [
@@ -46,16 +53,13 @@ const createServiceProxy = (app, route, target, serviceName) => {
           }
         });
 
-        // IMPORTANTE: Si hay body en la petición (POST/PUT), hay que volver a escribirlo
-        // porque el middleware 'express.json()' ya lo ha consumido.
+        // IMPORTANTE: Reescribir el body porque express.json() ya lo consumió
         if (req.body && Object.keys(req.body).length > 0) {
           const bodyData = JSON.stringify(req.body);
 
-          // 1. Asegurarse que los headers de contenido son correctos
           proxyReq.setHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
           proxyReq.setHeader(HEADER_CONTENT_LENGTH, Buffer.byteLength(bodyData));
 
-          // 2. Escribir el cuerpo en el stream de la petición de proxy
           proxyReq.write(bodyData);
         }
 
@@ -65,13 +69,13 @@ const createServiceProxy = (app, route, target, serviceName) => {
         logger.debug(`Proxy Params: ${req.originalUrl}`);
       },
       onProxyRes: (proxyRes, req, res) => {
-        // Asegurar que los headers CORS se pasen correctamente
+        // Asegurar headers CORS
         proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_ORIGIN] = req.headers.origin || '*';
         proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS] = 'true';
       },
       onError: (err, req, res) => {
         logger.error(`Proxy error (${serviceName} Service): ${err.message}`);
-        // 503 Service Unavailable: El servidor actualmente no puede manejar la petición debido a sobrecarga temporal o mantenimiento programado.
+
         sendError(
           res,
           `Service unavailable. Unable to reach ${serviceName.toLowerCase()} service.`,
@@ -110,6 +114,18 @@ export const setupProxyRoutes = (app) => {
 
   // Proxy a servicio de beats
   createServiceProxy(app, '/api/v1/beats', services.beats.url, 'Beats');
+
+  // 🔥 Proxy a servicio de beats-interactions
+  // /api/v1/beats-interactions/*  --->  /api/v1/*
+  createServiceProxy(
+    app,
+    '/api/v1/beats-interactions',
+    services.beatsInteractions.url,
+    'BeatsInteractions',
+    {
+      '^/api/v1/beats-interactions': '/api/v1',
+    }
+  );
 
   logger.info('✅ Proxy routes configured');
 };
