@@ -3,8 +3,7 @@ import { sendError } from './response.js';
 
 export const errorHandler = (err, req, res, next) => {
   logger.error('Unhandled error:', {
-    error: err.message,
-    stack: err.stack,
+    error: err,
     path: req.path,
     method: req.method,
   });
