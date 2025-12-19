@@ -10,21 +10,29 @@ export const services = {
     url: process.env.USERS_SERVICE_URL || 'http://localhost:3001',
     timeout: 5000,
   },
-  payments: {
-    url: process.env.PAYMENTS_SERVICE_URL || 'http://localhost:3002',
+  beatsInteractions: {
+    url: process.env.BEATS_INTERACTION_SERVICE_URL || 'http://localhost:3002',
     timeout: 5000,
   },
   analytics: {
     url: process.env.ANALYTICS_SERVICE_URL || 'http://localhost:3003',
     timeout: 5000,
   },
-  notifications: {
-    url: process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3004',
-    timeout: 3000,
+  social: {
+    url: process.env.SOCIAL_SERVICE_URL || 'http://localhost:3004',
+    timeout: 5000,
   },
   beats: {
     url: process.env.BEATS_SERVICE_URL || 'http://localhost:3005',
     timeout: 5000,
+  },
+  payments: {
+    url: process.env.PAYMENTS_SERVICE_URL || 'http://localhost:3006',
+    timeout: 5000,
+  },
+  notifications: {
+    url: process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3007',
+    timeout: 3000,
   },
 };
 
