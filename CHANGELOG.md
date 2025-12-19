@@ -1,3 +1,28 @@
+# Release v0.0.2
+
+## Features
+- feat: add beats-interactions redirection to api-gateway
+- feat: add remaining services in services.js
+- feat: pass authentication headers to microservices in proxy requests
+
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+No fixes added.
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #9 from SocialBeats/develop
+- chore: fix errorHandler log
+- Merge pull request #6 from SocialBeats/fix/auth-headers
+- chore: update .env.examples
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v0.0.1...v0.0.2).
+
 # Release v0.0.1
 
 ## Features
