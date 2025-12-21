@@ -1,3 +1,23 @@
+# Release v0.0.3
+
+## Features
+- feat: parametrize API-gateway ratelimit
+
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+No fixes added.
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #10 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v0.0.2...v0.0.3).
+
 # Release v0.0.2
 
 ## Features
