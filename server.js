@@ -80,7 +80,13 @@ app.get('/health', (req, res) => {
  * Rutas públicas: Se definen explícitamente para saltar la validación de token.
  * Todas las demás rutas requieren un token JWT válido.
  */
-const publicPaths = ['/v1/auth/register', '/v1/auth/login', '/v1/auth/refresh', '/v1/auth/logout'];
+const publicPaths = [
+  '/v1/auth/register',
+  '/v1/auth/login',
+  '/v1/auth/refresh',
+  '/v1/auth/logout',
+  '/v1/profile/internal', // Rutas internas protegidas por API Key, no por JWT
+];
 
 app.use('/api', (req, res, next) => {
   // Verificar si la ruta es pública
