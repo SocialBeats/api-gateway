@@ -44,6 +44,7 @@ const createServiceProxy = (
           'x-roles',
           'x-username',
           'x-user-pricing-plan',
+          'x-internal-api-key', // Para rutas internas protegidas por API Key
         ];
 
         authHeaders.forEach((header) => {
