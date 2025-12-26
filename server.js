@@ -86,6 +86,10 @@ const publicPaths = [
   '/v1/auth/refresh',
   '/v1/auth/logout',
   '/v1/profile/internal', // Rutas internas protegidas por API Key, no por JWT
+  '/v1/auth/forgot-password',
+  '/v1/auth/reset-password',
+  '/v1/auth/verify-email',
+  '/v1/auth/resend-verification',
 ];
 
 app.use('/api', (req, res, next) => {
