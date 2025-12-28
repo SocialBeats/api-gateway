@@ -51,10 +51,10 @@ export const createRateLimiter = () => {
 
       // Límites por plan de precios
       const limits = {
-        free: process.env.FREE_PLAN_MAX_REQUESTS_PER_MINUTE || 10,
-        basic: process.env.BASIC_PLAN_MAX_REQUESTS_PER_MINUTE || 50,
-        premium: process.env.PREMIUM_PLAN_MAX_REQUESTS_PER_MINUTE || 200,
-        enterprise: process.env.ENTERPRISE_PLAN_MAX_REQUESTS_PER_MINUTE || 1000,
+        free: process.env.FREE_PLAN_MAX_REQUESTS_PER_MINUTE || 1000000,
+        basic: process.env.BASIC_PLAN_MAX_REQUESTS_PER_MINUTE || 5000000,
+        premium: process.env.PREMIUM_PLAN_MAX_REQUESTS_PER_MINUTE || 2000000,
+        enterprise: process.env.ENTERPRISE_PLAN_MAX_REQUESTS_PER_MINUTE || 10000000,
       };
 
       const limit = limits[plan] || limits['free'];
