@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import logger from './logger.js';
 import { authenticateRequest } from './src/middleware/authentication.js';
 import { createRateLimiter } from './src/middleware/rateLimiter.js';
+import { initSpaceClient } from './src/lib/spaceClient.js';
 import { setupProxyRoutes } from './src/routes/proxy.js';
 import { setupAggregationRoutes } from './src/routes/aggregation.js';
 import { errorHandler } from './src/utils/errorHandler.js';
@@ -48,6 +49,15 @@ app.use(cors(corsOptions));
 // NOTA: Esto puede causar problemas con proxies si no se maneja en onProxyReq (ver src/routes/proxy.js).
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ============================================
+// MIDDLEWARE DE SPACE (PRICING TOKEN)
+// ============================================
+initSpaceClient({
+  url: process.env.SPACE_URL,
+  apiKey: process.env.SPACE_API_KEY,
+});
+logger.info('🚀 SpaceClient inicializado para Pricing Tokens');
 
 // ============================================
 // 2. HEALTH CHECK
