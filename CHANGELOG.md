@@ -1,3 +1,28 @@
+# Release v0.0.4
+
+## Features
+- feat: pricing token middleware added and space dependencies
+- feat: new open routes for email features
+- feat: add open path for faas access
+
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: changed .env.docker-compose.example to adjust payments and suscription service
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #13 from SocialBeats/develop
+- Merge pull request #12 from SocialBeats/feat/pricingToken-middleware
+- Merge pull request #11 from SocialBeats/feat/verification-faas
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v0.0.3...v0.0.4).
+
 # Release v0.0.3
 
 ## Features
