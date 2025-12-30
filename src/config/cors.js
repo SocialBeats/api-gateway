@@ -32,5 +32,7 @@ export const corsOptions = {
     'X-Requested-With',
     'X-User-Id',
     'X-Pricing-Plan',
+    'Pricing-Token',
   ],
+  exposedHeaders: ['Pricing-Token'],
 };

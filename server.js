@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import logger from './logger.js';
 import { authenticateRequest } from './src/middleware/authentication.js';
 import { createRateLimiter } from './src/middleware/rateLimiter.js';
+import { initSpaceClient } from './src/lib/spaceClient.js';
 import { setupProxyRoutes } from './src/routes/proxy.js';
 import { setupAggregationRoutes } from './src/routes/aggregation.js';
 import { errorHandler } from './src/utils/errorHandler.js';
@@ -50,6 +51,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============================================
+// MIDDLEWARE DE SPACE (PRICING TOKEN)
+// ============================================
+initSpaceClient({
+  url: process.env.SPACE_URL,
+  apiKey: process.env.SPACE_API_KEY,
+});
+logger.info('🚀 SpaceClient inicializado para Pricing Tokens');
+
+// ============================================
 // 2. HEALTH CHECK
 // ============================================
 
@@ -80,7 +90,17 @@ app.get('/health', (req, res) => {
  * Rutas públicas: Se definen explícitamente para saltar la validación de token.
  * Todas las demás rutas requieren un token JWT válido.
  */
-const publicPaths = ['/v1/auth/register', '/v1/auth/login', '/v1/auth/refresh', '/v1/auth/logout'];
+const publicPaths = [
+  '/v1/auth/register',
+  '/v1/auth/login',
+  '/v1/auth/refresh',
+  '/v1/auth/logout',
+  '/v1/profile/internal', // Rutas internas protegidas por API Key, no por JWT
+  '/v1/auth/forgot-password',
+  '/v1/auth/reset-password',
+  '/v1/auth/verify-email',
+  '/v1/auth/resend-verification',
+];
 
 app.use('/api', (req, res, next) => {
   // Verificar si la ruta es pública

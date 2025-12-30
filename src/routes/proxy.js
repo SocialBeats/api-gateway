@@ -2,6 +2,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { services } from '../config/services.js';
 import logger from '../../logger.js';
 import { sendError } from '../utils/response.js';
+import { generatePricingToken, injectPricingToken } from '../middleware/pricingTokenMiddleware.js';
 import {
   HEADER_CONTENT_TYPE,
   HEADER_CONTENT_LENGTH,
@@ -28,6 +29,12 @@ const createServiceProxy = (
     [`^${route}`]: route,
   }
 ) => {
+  // Middleware para generar el Pricing-Token ANTES del proxy
+  app.use(route, async (req, res, next) => {
+    await generatePricingToken(null, req);
+    next();
+  });
+
   app.use(
     route,
     createProxyMiddleware({
@@ -44,6 +51,7 @@ const createServiceProxy = (
           'x-roles',
           'x-username',
           'x-user-pricing-plan',
+          'x-internal-api-key', // Para rutas internas protegidas por API Key
         ];
 
         authHeaders.forEach((header) => {
@@ -68,10 +76,14 @@ const createServiceProxy = (
         logger.debug(`Proxy Query: ${JSON.stringify(req.query)}`);
         logger.debug(`Proxy Params: ${req.originalUrl}`);
       },
-      onProxyRes: (proxyRes, req, res) => {
-        // Asegurar headers CORS
+      onProxyRes: (proxyRes, req) => {
+        // Inyectar Pricing-Token pre-generado en la respuesta (síncrono)
+        injectPricingToken(proxyRes, req);
+
+        // Asegurar headers CORS para que el cliente pueda leer el token
         proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_ORIGIN] = req.headers.origin || '*';
         proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS] = 'true';
+        proxyRes.headers['Access-Control-Expose-Headers'] = 'Pricing-Token';
       },
       onError: (err, req, res) => {
         logger.error(`Proxy error (${serviceName} Service): ${err.message}`);
