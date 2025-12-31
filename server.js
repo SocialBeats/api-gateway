@@ -95,6 +95,7 @@ const publicPaths = [
   '/v1/auth/login',
   '/v1/auth/refresh',
   '/v1/auth/logout',
+  '/v1/auth/2fa/verify',
   '/v1/profile/internal', // Rutas internas protegidas por API Key, no por JWT
   '/v1/auth/forgot-password',
   '/v1/auth/reset-password',
