@@ -1,3 +1,24 @@
+# Release v1.0.1
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: delete comment
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge branch 'main' of https://github.com/SocialBeats/api-gateway
+- chore: update CHANGELOG and .version for v1.0
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v1.0.0...v1.0.1).
+
 # Release v1.0
 
 ## Features
