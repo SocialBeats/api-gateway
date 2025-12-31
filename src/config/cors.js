@@ -18,7 +18,9 @@ export const corsOptions = {
     }
 
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
-    if (allowedOrigins.indexOf(origin) !== -1) {
+
+    // Soportar wildcard "*"
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
