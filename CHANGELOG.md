@@ -1,3 +1,27 @@
+# Release v1.0
+
+## Features
+- feat: add wildcard support in cors
+- feat: new route for 2FA
+- feat: add social route
+
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+No fixes added.
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #15 from SocialBeats/develop
+- Merge pull request #14 from SocialBeats/new-release
+- chore: update package-lock.json
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v0.0.4...v1.0).
+
 # Release v0.0.4
 
 ## Features
