@@ -10,7 +10,6 @@
  */
 export const corsOptions = {
   origin: (origin, callback) => {
-    // Permitir requests sin origen (como apps móviles, curl, o server-to-server)
     if (!origin) return callback(null, true);
 
     if (process.env.NODE_ENV === 'development') {
