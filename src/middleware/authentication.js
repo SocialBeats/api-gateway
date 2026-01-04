@@ -27,21 +27,38 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
  * Valida el token JWT (firma) y luego verifica contra Redis (revocación)
  * antes de enviar la petición a los microservicios.
  *
+ * Para SSE (Server-Sent Events), también acepta el token como query parameter
+ * ya que EventSource no soporta headers personalizados.
+ *
  * @param {import('express').Request} req - Express request object
  * @param {import('express').Response} res - Express response object
  * @param {import('express').NextFunction} next - Express next function
  */
 export const authenticateRequest = async (req, res, next) => {
-  // Obtener token del header Authorization
+  // Obtener token del header Authorization o query parameter (para SSE)
   const authHeader = req.headers.authorization;
+  const queryToken = req.query.token;
 
-  if (!authHeader || !authHeader.startsWith(AUTH_BEARER_PREFIX)) {
+  let token;
+
+  // Prioridad: header Authorization > query parameter
+  if (authHeader && authHeader.startsWith(AUTH_BEARER_PREFIX)) {
+    token = authHeader.replace(AUTH_BEARER_PREFIX, '');
+  } else if (queryToken) {
+    // Solo aceptar token por query param para rutas SSE
+    if (req.path.includes('/metrics-events') || req.path.includes('/events')) {
+      token = queryToken;
+      logger.debug('Using token from query parameter for SSE connection');
+    } else {
+      logger.warn(`Query token not allowed for non-SSE route: ${req.path}`);
+    }
+  }
+
+  if (!token) {
     logger.warn(`Authentication failed: No token provided for ${req.path}`);
     // 401 Unauthorized: Authentication is required and has failed or has not been yet provided.
     return sendError(res, 'Authentication required. No token provided.', 401);
   }
-
-  const token = authHeader.replace(AUTH_BEARER_PREFIX, '');
 
   try {
     // Paso 1: Verificar firma JWT

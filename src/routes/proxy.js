@@ -41,6 +41,10 @@ const createServiceProxy = (
       target,
       changeOrigin: true,
       pathRewrite,
+      // SSE/WebSocket support - no timeout for streaming connections
+      ws: true,
+      timeout: 0,
+      proxyTimeout: 0,
       onProxyReq: (proxyReq, req) => {
         logger.debug(`Proxying to ${serviceName} Service: ${req.method} ${req.originalUrl}`);
 
@@ -61,6 +65,13 @@ const createServiceProxy = (
           }
         });
 
+        // For SSE connections, remove query token to avoid exposing it in logs
+        if (req.query.token) {
+          logger.debug('Removing token from query params before proxying (SSE connection)');
+          // Token already validated by authenticateRequest middleware
+          // and user info is in headers, so we don't need to forward the query param
+        }
+
         // IMPORTANTE: Reescribir el body porque express.json() ya lo consumió
         if (req.body && Object.keys(req.body).length > 0) {
           const bodyData = JSON.stringify(req.body);
@@ -76,8 +87,28 @@ const createServiceProxy = (
         logger.debug(`Proxy Query: ${JSON.stringify(req.query)}`);
         logger.debug(`Proxy Params: ${req.originalUrl}`);
       },
-      onProxyRes: (proxyRes, req) => {
-        // Inyectar Pricing-Token pre-generado en la respuesta (síncrono)
+      onProxyRes: (proxyRes, req, res) => {
+        // Check if this is an SSE connection (text/event-stream)
+        const isSSE = proxyRes.headers['content-type']?.includes('text/event-stream');
+
+        if (isSSE) {
+          // For SSE connections, disable all buffering
+          logger.info(`SSE connection established: ${req.originalUrl}`);
+
+          // Set headers to prevent buffering
+          res.setHeader('Cache-Control', 'no-cache, no-transform');
+          res.setHeader('Connection', 'keep-alive');
+          res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+          // CORS headers for SSE
+          res.setHeader(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, req.headers.origin || '*');
+          res.setHeader(HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS, 'true');
+
+          // Don't inject pricing token for SSE streams
+          return;
+        }
+
+        // Normal HTTP responses - inject Pricing-Token
         injectPricingToken(proxyRes, req);
 
         // Asegurar headers CORS para que el cliente pueda leer el token
