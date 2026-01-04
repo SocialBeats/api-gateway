@@ -1,3 +1,24 @@
+# Release v1.0.2
+
+## Features
+- feat: enhance authentication middleware to support token from query parameter for SSE connections
+- feat: add SSE/WebSocket support and enhance proxy response handling
+
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+No fixes added.
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #16 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v1.0.1...v1.0.2).
+
 # Release v1.0.1
 
 ## Features
