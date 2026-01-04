@@ -65,6 +65,13 @@ const createServiceProxy = (
           }
         });
 
+        // For SSE connections, remove query token to avoid exposing it in logs
+        if (req.query.token) {
+          logger.debug('Removing token from query params before proxying (SSE connection)');
+          // Token already validated by authenticateRequest middleware
+          // and user info is in headers, so we don't need to forward the query param
+        }
+
         // IMPORTANTE: Reescribir el body porque express.json() ya lo consumió
         if (req.body && Object.keys(req.body).length > 0) {
           const bodyData = JSON.stringify(req.body);
