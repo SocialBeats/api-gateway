@@ -159,7 +159,10 @@ export const setupProxyRoutes = (app) => {
   createServiceProxy(app, '/api/v1/beats', services.beats.url, 'Beats');
 
   // Proxy a servicio social
-  createServiceProxy(app, '/api/v1/social', services.social.url, 'Social');
+  // /api/v1/social/*  --->  /api/v1/*
+  createServiceProxy(app, '/api/v1/social', services.social.url, 'Social', {
+    '^/api/v1/social': '/api/v1',
+  });
 
   // 🔥 Proxy a servicio de beats-interactions
   // /api/v1/beats-interactions/*  --->  /api/v1/*
