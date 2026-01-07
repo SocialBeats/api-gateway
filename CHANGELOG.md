@@ -1,3 +1,23 @@
+# Release v1.2.0
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: fix socket.io endpoint
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #19 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v1.1.1...v1.2.0).
+
 # Release v1.1.1
 
 ## Features
