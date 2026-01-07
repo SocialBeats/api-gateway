@@ -160,9 +160,7 @@ export const setupProxyRoutes = (app) => {
 
   // Proxy a servicio social
   // /api/v1/social/*  --->  /api/v1/*
-  createServiceProxy(app, '/api/v1/social/socket.io', services.social.url, 'Social', {
-    '^/api/v1/social/socket.io': '/socket.io',
-  });
+  createServiceProxy(app, '/socket.io', services.social.url, 'Social');
 
   createServiceProxy(app, '/api/v1/social', services.social.url, 'Social', {
     '^/api/v1/social': '/api/v1',
