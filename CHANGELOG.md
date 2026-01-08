@@ -1,3 +1,24 @@
+# Release v2.2.0
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: fix the problem enabling swagger horitontal bar
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #27 from SocialBeats/develop
+- chore: fix oas routes
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v2.1.1...v2.2.0).
+
 # Release v2.1.1
 
 ## Features
