@@ -59,6 +59,13 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  // Prefijo externo esperado
+  const forwardedPrefix = req.headers['x-forwarded-prefix'] || '/socialbeats-api';
+  req.publicBasePath = forwardedPrefix;
+  next();
+});
+
 // Compression: Comprime las respuestas HTTP (gzip) para mejorar la velocidad.
 app.use(compression());
 
@@ -107,17 +114,16 @@ app.get('/health', (req, res) => {
 // Servir archivos estáticos de OAS
 app.use('/oas', express.static(path.join(__dirname, 'oas')));
 
-// Configurar Swagger UI con múltiples specs
 const swaggerOptions = {
   explorer: true,
   swaggerOptions: {
     urls: [
-      { name: 'User & Auth Service', url: '/oas/user-auth.yaml' },
-      { name: 'Payments & Subscriptions', url: '/oas/payments-and-suscriptions.yaml' },
-      { name: 'Analytics & Dashboards', url: '/oas/analytics-and-dashboards.yaml' },
-      { name: 'Beats Upload', url: '/oas/beats-upload.yaml' },
-      { name: 'Beats Interaction', url: '/oas/beats-interaction.yaml' },
-      { name: 'Social Service', url: '/oas/social.yaml' },
+      { name: 'User & Auth Service', url: `/oas/user-auth.yaml` },
+      { name: 'Payments & Subscriptions', url: `/oas/payments-and-suscriptions.yaml` },
+      { name: 'Analytics & Dashboards', url: `/oas/analytics-and-dashboards.yaml` },
+      { name: 'Beats Upload', url: `/oas/beats-upload.yaml` },
+      { name: 'Beats Interaction', url: `/oas/beats-interaction.yaml` },
+      { name: 'Social Service', url: `/oas/social.yaml` },
     ],
   },
   customSiteTitle: 'Socialbeats API Documentation',
@@ -130,7 +136,7 @@ app.use(
 );
 
 app.get('/', (req, res) => {
-  res.redirect('/api-docs');
+  res.redirect(`${req.publicBasePath}/api-docs`);
 });
 
 // ============================================
