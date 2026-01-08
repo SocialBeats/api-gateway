@@ -1,0 +1,1106 @@
+openapi: 3.0.0
+info:
+  title: Social microservice API
+  version: v1.0.0
+  description: This is an OAS description of this social microservice REST API
+servers:
+  - url: https://api.socialbeats.es/socialbeats-api/api/v1/social
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    xUserIdAuth:
+      type: apiKey
+      in: header
+      name: x-user-id
+      description: >-
+        Temporary dev auth for this microservice. Provide a valid MongoDB
+        ObjectId. Will be replaced by JWT.
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Missing x-user-id
+      required:
+        - error
+    Conversation:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f345
+        type:
+          type: string
+          enum:
+            - direct
+          example: direct
+        members:
+          type: array
+          items:
+            type: string
+          example:
+            - 64f0c2b9b3b2c1a0d1e2f111
+            - 64f0c2b9b3b2c1a0d1e2f222
+        membersKey:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f111:64f0c2b9b3b2c1a0d1e2f222
+        lastMessageAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2025-11-23T12:00:00.000Z'
+        lastMessageText:
+          type: string
+          example: Hola, ¿qué tal?
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-11-23T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-11-23T11:00:00.000Z'
+      required:
+        - _id
+        - type
+        - members
+        - membersKey
+        - createdAt
+        - updatedAt
+      description: >-
+        Represents a direct conversation between exactly two users. Empty
+        conversations (lastMessageAt null) are not returned by
+        listConversations.
+    ConversationListItem:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          properties:
+            otherUserId:
+              type: string
+              example: 64f0c2b9b3b2c1a0d1e2f222
+              description: 'Computed field: member id different from the authenticated user.'
+          required:
+            - otherUserId
+    Message:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f999
+        conversationId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f345
+        senderId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f111
+        text:
+          type: string
+          maxLength: 1000
+          example: ¿Vamos a jugar más tarde?
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-11-23T12:01:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-11-23T12:01:00.000Z'
+      required:
+        - _id
+        - conversationId
+        - senderId
+        - text
+        - createdAt
+        - updatedAt
+      description: >-
+        Represents a message sent by a user within a conversation. Messages are
+        returned chronologically (oldest to newest) in listMessages.
+    Friendship:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f999
+        requester:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f111
+          description: User who sent the request
+        recipient:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f222
+          description: User who received the request
+        status:
+          type: string
+          enum:
+            - pending
+            - accepted
+            - rejected
+          example: pending
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - _id
+        - requester
+        - recipient
+        - status
+        - createdAt
+        - updatedAt
+      description: Friendship relation between two users.
+    FriendSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f222
+        _id:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f222
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          example: john@example.com
+      required:
+        - id
+    FeedItem:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f888
+        userId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f111
+          description: User who receives this feed item
+        type:
+          type: string
+          enum:
+            - friendship
+            - FEED_COMMENT_CREATED
+            - FEED_RATING_CREATED
+            - FEED_BEAT_CREATED
+          example: friendship
+          description: Type of feed event
+        entityId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f999
+          description: ID of the entity (beat, comment, rating, friendship)
+        actorId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f222
+          description: User who triggered the event
+        beatId:
+          type: string
+          nullable: true
+          example: 64f0c2b9b3b2c1a0d1e2f333
+        friendId:
+          type: string
+          nullable: true
+          example: 64f0c2b9b3b2c1a0d1e2f222
+        commentId:
+          type: string
+          nullable: true
+          example: 64f0c2b9b3b2c1a0d1e2f444
+        title:
+          type: string
+          nullable: true
+          example: New beat uploaded
+        text:
+          type: string
+          nullable: true
+          example: Check out this new track!
+        thumbnailUrl:
+          type: string
+          nullable: true
+          example: https://example.com/thumbnail.jpg
+        score:
+          type: number
+          nullable: true
+          example: 4.5
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-11-23T12:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-11-23T12:00:00.000Z'
+      required:
+        - _id
+        - userId
+        - type
+        - entityId
+        - actorId
+        - createdAt
+        - updatedAt
+      description: Social feed item representing an event in the network.
+    PaginatedConversations:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationListItem'
+        hasMore:
+          type: boolean
+          example: true
+        nextCursor:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2025-11-23T12:00:00.000Z'
+          description: >-
+            Cursor for next page. Use as `cursor` query param (lastMessageAt <
+            cursor).
+      required:
+        - items
+        - hasMore
+        - nextCursor
+    PaginatedMessages:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        hasMore:
+          type: boolean
+          example: true
+        nextCursor:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2025-11-23T11:45:00.000Z'
+          description: >-
+            Cursor for next page. Use as `before` query param (createdAt <
+            before). This cursor is the oldest message date in the current page.
+      required:
+        - items
+        - hasMore
+        - nextCursor
+    PaginatedFeed:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedItem'
+        meta:
+          type: object
+          properties:
+            limit:
+              type: integer
+              example: 20
+            page:
+              type: integer
+              example: 0
+            count:
+              type: integer
+              example: 5
+      required:
+        - items
+        - meta
+    FriendsResponse:
+      type: object
+      properties:
+        friends:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendSummary'
+      required:
+        - friends
+    UpsertDirectConversationRequest:
+      type: object
+      properties:
+        otherUserId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f222
+      required:
+        - otherUserId
+    SendMessageRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          maxLength: 1000
+          example: Hola!
+      required:
+        - text
+    FriendshipRequest:
+      type: object
+      properties:
+        recipientId:
+          type: string
+          example: 64f0c2b9b3b2c1a0d1e2f222
+      required:
+        - recipientId
+    FriendshipRespondRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - accept
+            - reject
+          example: accept
+      required:
+        - action
+paths:
+  /api/v1/about:
+    get:
+      tags:
+        - Documentation
+      summary: Retrieve the entire README file as HTML.
+      description: Reads the entire README file and returns its content as HTML.
+      responses:
+        '200':
+          description: Successfully retrieved the README file content as HTML.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The HTML content of the README file.
+        '500':
+          description: Error reading the README file.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Error message when the file cannot be read.
+                example: 'Error reading the file: [error details]'
+  /api/v1/version:
+    get:
+      tags:
+        - Documentation
+      summary: Retrieve the API version from the .version file.
+      description: >-
+        Reads the .version file and returns its content as part of a JSON
+        message.
+      responses:
+        '200':
+          description: Successfully retrieved the API version.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: The current API version.
+                    example: v1.0.0
+        '500':
+          description: Error reading the .version file.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message summary.
+                    example: There was an error retrieving API version
+                  error:
+                    type: string
+                    description: Detailed error message.
+                    example: 'ENOENT: no such file or directory, open ''.version'''
+  /api/v1/changelog:
+    get:
+      tags:
+        - Documentation
+      summary: Retrieve the API changelog.
+      description: >
+        Reads the `CHANGELOG.md` file, parses its content, and returns it as
+        HTML. Supports filtering by specific versions, multiple versions, or a
+        version range.
+      parameters:
+        - in: query
+          name: versions
+          schema:
+            type: string
+          description: >
+            Comma-separated list of release versions to retrieve (e.g.
+            `v2.1.4,v2.1.2`).
+        - in: query
+          name: from
+          schema:
+            type: string
+          description: >
+            Starting release version for the changelog range (inclusive, e.g.
+            `v2.1.2`).
+        - in: query
+          name: to
+          schema:
+            type: string
+          description: >
+            Ending release version for the changelog range (inclusive, e.g.
+            `v2.1.4`).
+      responses:
+        '200':
+          description: Successfully retrieved the changelog.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The HTML representation of the changelog or filtered releases.
+        '500':
+          description: Error reading the CHANGELOG.md file.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Error message when the changelog cannot be read.
+                example: >-
+                  There was an error retrieving API release notes: ENOENT: no
+                  such file or directory, open 'CHANGELOG.md'
+  /api/v1/feed:
+    get:
+      tags:
+        - Feed
+      summary: Get social feed for authenticated user
+      description: >
+        Returns a paginated social feed containing events from friends and
+        network activities (friendships, comments, ratings, beats, etc.). Feed
+        items are sorted by creation date.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+          description: >-
+            User ID (optional, can also use x-user-id header from gateway). If
+            not provided, uses authenticated user ID.
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Page number for pagination (zero-indexed).
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page (max 100).
+      responses:
+        '200':
+          description: Paginated feed items retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFeed'
+        '400':
+          description: Invalid or missing user ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingUserId:
+                  value:
+                    message: Invalid or missing userId
+        '500':
+          description: Server error retrieving feed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  value:
+                    message: Server error
+  /api/v1/friendships:
+    post:
+      tags:
+        - Friendships
+      summary: Send a friendship request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FriendshipRequest'
+      responses:
+        '200':
+          description: Friendship request reactivated or auto-accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friendship'
+        '201':
+          description: Friendship request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friendship'
+        '400':
+          description: Invalid user id or self-request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Recipient not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate or pending request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/friendships/received:
+    get:
+      tags:
+        - Friendships
+      summary: List pending friendship requests received
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pending requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Friendship'
+        '400':
+          description: Invalid user id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/friendships/sent:
+    get:
+      tags:
+        - Friendships
+      summary: List pending friendship requests sent
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sent requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Friendship'
+        '400':
+          description: Invalid user id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/friendships/{id}/respond:
+    patch:
+      tags:
+        - Friendships
+      summary: Accept or reject a friendship request
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Friendship request id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FriendshipRespondRequest'
+      responses:
+        '200':
+          description: Request processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friendship'
+        '400':
+          description: Invalid id or action
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not allowed to respond to this request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Request already processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/friends:
+    get:
+      tags:
+        - Friendships
+      summary: List accepted friends for the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Friends list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FriendsResponse'
+        '400':
+          description: Invalid user id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/friends/{id}:
+    delete:
+      tags:
+        - Friendships
+      summary: Remove an existing friend
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Friend user id
+      responses:
+        '200':
+          description: Friendship removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Friendship removed
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Friendship not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns basic information to verify that the API is running properly.
+      responses:
+        '200':
+          description: API is healthy and responding.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  message:
+                    type: string
+                    example: Health check successful
+                  version:
+                    type: string
+                    example: 1.0.0
+                  uptime:
+                    type: number
+                    example: 123.45
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2025-11-08T13:41:47.074Z'
+                  environment:
+                    type: string
+                    example: development
+                  db:
+                    type: string
+                    example: connected
+                  kafka:
+                    type: string
+                    example: connected
+  /api/v1/social/conversations/direct:
+    post:
+      tags:
+        - Conversations
+      summary: Create or get a direct conversation (upsert)
+      description: >
+        Creates a direct conversation with `otherUserId` if it does not exist,
+        or returns the existing one. Temporary auth uses `x-user-id` header
+        (dev). Future auth will use JWT bearer. `otherUserId` must be a valid
+        MongoDB ObjectId and cannot be equal to the authenticated user.
+      security:
+        - xUserIdAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDirectConversationRequest'
+      responses:
+        '200':
+          description: Conversation successfully created or retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversation:
+                    $ref: '#/components/schemas/Conversation'
+        '400':
+          description: Invalid header or invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidHeader:
+                  value:
+                    error: Invalid x-user-id
+                invalidOtherUserId:
+                  value:
+                    error: Invalid otherUserId
+                selfConversation:
+                  value:
+                    error: Cannot create conversation with yourself
+        '401':
+          description: >-
+            Unauthorized. Missing `x-user-id` header (dev) or missing/invalid
+            token (future).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingHeader:
+                  value:
+                    error: Missing x-user-id
+        '403':
+          description: Forbidden. You can only message friends.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFriends:
+                  value:
+                    error: You can only message friends
+  /api/v1/social/conversations:
+    get:
+      tags:
+        - Conversations
+      summary: List user conversations (cursor pagination)
+      description: >
+        Returns conversations for the authenticated user, ordered by
+        `lastMessageAt` (desc) and `updatedAt` (desc). Empty conversations
+        (without messages) are not returned. Pagination uses `cursor` (ISO
+        date-time) applied to `lastMessageAt`.
+      security:
+        - xUserIdAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            format: date-time
+          description: >-
+            Return conversations with `lastMessageAt` strictly less than this
+            value.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Max number of conversations to return (max 50).
+      responses:
+        '200':
+          description: Paginated list of conversations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConversations'
+        '400':
+          description: Invalid `x-user-id` header value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidHeader:
+                  value:
+                    error: Invalid x-user-id
+        '401':
+          description: >-
+            Unauthorized. Missing `x-user-id` header (dev) or missing/invalid
+            token (future).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingHeader:
+                  value:
+                    error: Missing x-user-id
+  /api/v1/social/conversations/{id}/messages:
+    get:
+      tags:
+        - Messages
+      summary: List messages in a conversation (backward pagination)
+      description: >
+        Returns messages for a conversation the authenticated user belongs to.
+        Pagination uses `before` (ISO date-time) applied to `createdAt`.
+        Messages are returned in chronological order (oldest to newest) for
+        easier UI rendering.
+      security:
+        - xUserIdAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Conversation ID (MongoDB ObjectId).
+        - in: query
+          name: before
+          schema:
+            type: string
+            format: date-time
+          description: Return messages with `createdAt` strictly less than this value.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+          description: Max number of messages to return (max 100).
+      responses:
+        '200':
+          description: Paginated list of messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessages'
+        '400':
+          description: Invalid conversation id or invalid `x-user-id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidConversationId:
+                  value:
+                    error: Invalid conversationId
+                invalidHeader:
+                  value:
+                    error: Invalid x-user-id
+        '401':
+          description: >-
+            Unauthorized. Missing `x-user-id` header (dev) or missing/invalid
+            token (future).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingHeader:
+                  value:
+                    error: Missing x-user-id
+        '403':
+          description: Forbidden. Authenticated user is not a member of the conversation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    error: Forbidden
+        '404':
+          description: Conversation not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    error: Conversation not found
+    post:
+      tags:
+        - Messages
+      summary: Send a message to a conversation
+      description: >
+        Sends a new message in the specified conversation. The authenticated
+        user must be a member of the conversation and must be friends with the
+        other participant. `text` must be a non-empty string (trimmed) and max
+        length is 1000 characters.
+      security:
+        - xUserIdAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Conversation ID (MongoDB ObjectId).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message successfully created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid conversation id, invalid header, or invalid message text.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidConversationId:
+                  value:
+                    error: Invalid conversationId
+                missingText:
+                  value:
+                    error: Text is required
+                textTooLong:
+                  value:
+                    error: Text too long (max 1000)
+                invalidHeader:
+                  value:
+                    error: Invalid x-user-id
+        '401':
+          description: >-
+            Unauthorized. Missing `x-user-id` header (dev) or missing/invalid
+            token (future).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingHeader:
+                  value:
+                    error: Missing x-user-id
+        '403':
+          description: >-
+            Forbidden. Not a member of the conversation or you can only message
+            friends.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                forbidden:
+                  value:
+                    error: Forbidden
+                notFriends:
+                  value:
+                    error: You can only message friends
+        '404':
+          description: Conversation not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    error: Conversation not found
+tags: []

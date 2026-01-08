@@ -14,6 +14,7 @@ import { setupAggregationRoutes } from './src/routes/aggregation.js';
 import { errorHandler } from './src/utils/errorHandler.js';
 import { corsOptions } from './src/config/cors.js';
 import { sendSuccess } from './src/utils/response.js';
+import swaggerUi from 'swagger-ui-express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +38,26 @@ const PORT = process.env.PORT || 3000;
 // ============================================
 
 // Helmet: Protege la app configurando varios headers HTTP seguros.
-app.use(helmet());
+// Configuración especial para permitir Swagger UI
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+        imgSrc: ["'self'", 'data:', 'https://validator.swagger.io'],
+        connectSrc: [
+          "'self'",
+          'https://unpkg.com',
+          'https://api.socialbeats.es', // Producción
+          'http://localhost:3000', // Local
+          'http://localhost:*', // Cualquier puerto local
+        ],
+      },
+    },
+  })
+);
 
 // Compression: Comprime las respuestas HTTP (gzip) para mejorar la velocidad.
 app.use(compression());
@@ -78,6 +98,39 @@ app.get('/health', (req, res) => {
     },
     'Gateway is healthy'
   );
+});
+
+// ============================================
+// SWAGGER UI - DOCUMENTACIÓN API
+// ============================================
+
+// Servir archivos estáticos de OAS
+app.use('/oas', express.static(path.join(__dirname, 'oas')));
+
+// Configurar Swagger UI con múltiples specs
+const swaggerOptions = {
+  explorer: true,
+  swaggerOptions: {
+    urls: [
+      { name: 'User & Auth Service', url: '/oas/user-auth.yaml' },
+      { name: 'Payments & Subscriptions', url: '/oas/payments-and-suscriptions.yaml' },
+      { name: 'Analytics & Dashboards', url: '/oas/analytics-and-dashboards.yaml' },
+      { name: 'Beats Upload', url: '/oas/beats-upload.yaml' },
+      { name: 'Beats Interaction', url: '/oas/beats-interaction.yaml' },
+      { name: 'Social Service', url: '/oas/social.yaml' },
+    ],
+  },
+  customSiteTitle: 'Socialbeats API Documentation',
+};
+
+app.use(
+  '/api-docs',
+  swaggerUi.serveFiles(null, swaggerOptions),
+  swaggerUi.setup(null, swaggerOptions)
+);
+
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
 });
 
 // ============================================
@@ -169,6 +222,7 @@ if (process.env.NODE_ENV !== 'test') {
     logger.warn(`Using log level: ${process.env.LOG_LEVEL || 'info'}`);
     logger.info(`🚀 API Gateway running on port ${PORT}`);
     logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`📚 API Documentation: http://localhost:${PORT}/`);
     logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
     logger.info(`🔒 Authentication: ENABLED`);
     logger.info(`⚡ Rate Limiting: ENABLED`);
