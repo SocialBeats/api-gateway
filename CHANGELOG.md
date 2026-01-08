@@ -1,3 +1,23 @@
+# Release v2.2.1
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: fix again relative routes in oas
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #28 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v2.2.0...v2.2.1).
+
 # Release v2.2.0
 
 ## Features
