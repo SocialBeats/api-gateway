@@ -1,182 +1,199 @@
-import { createProxyMiddleware } from 'http-proxy-middleware';
-import { services } from '../config/services.js';
-import logger from '../../logger.js';
-import { sendError } from '../utils/response.js';
-import { generatePricingToken, injectPricingToken } from '../middleware/pricingTokenMiddleware.js';
-import {
-  HEADER_CONTENT_TYPE,
-  HEADER_CONTENT_LENGTH,
-  HEADER_ACCESS_CONTROL_ALLOW_ORIGIN,
-  HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS,
-  CONTENT_TYPE_JSON,
-} from '../config/constants.js';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import logger from './logger.js';
+import { authenticateRequest } from './src/middleware/authentication.js';
+import { createRateLimiter } from './src/middleware/rateLimiter.js';
+import { initSpaceClient } from './src/lib/spaceClient.js';
+import { setupProxyRoutes } from './src/routes/proxy.js';
+import { setupAggregationRoutes } from './src/routes/aggregation.js';
+import { errorHandler } from './src/utils/errorHandler.js';
+import { corsOptions } from './src/config/cors.js';
+import { sendSuccess } from './src/utils/response.js';
+import swaggerUi from 'swagger-ui-express';
 
-/**
- * Función factory para crear un proxy de servicio con configuración estándar.
- *
- * @param {Object} app - Instancia de aplicación Express
- * @param {string} route - La ruta base para el proxy (ej: '/api/v1/users')
- * @param {string} target - La URL destino del microservicio
- * @param {string} serviceName - El nombre del servicio para logging
- * @param {Object} pathRewrite - Reglas opcionales de reescritura de path
- */
-const createServiceProxy = (
-  app,
-  route,
-  target,
-  serviceName,
-  pathRewrite = {
-    [`^${route}`]: route,
-  }
-) => {
-  // Middleware para generar el Pricing-Token ANTES del proxy
-  app.use(route, async (req, res, next) => {
-    await generatePricingToken(null, req);
-    next();
-  });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
 
-  app.use(
-    route,
-    createProxyMiddleware({
-      target,
-      changeOrigin: true,
-      pathRewrite,
-      // SSE/WebSocket support - no timeout for streaming connections
-      ws: true,
-      timeout: 0,
-      proxyTimeout: 0,
-      onProxyReq: (proxyReq, req) => {
-        logger.debug(`Proxying to ${serviceName} Service: ${req.method} ${req.originalUrl}`);
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-        // Asegurar que los headers de autenticación se pasen al microservicio
-        const authHeaders = [
-          'x-gateway-authenticated',
-          'x-user-id',
-          'x-roles',
-          'x-username',
-          'x-user-pricing-plan',
-          'x-internal-api-key', // Para rutas internas protegidas por API Key
-        ];
+// ============================================
+// 1. MIDDLEWARES GLOBALES
+// ============================================
 
-        authHeaders.forEach((header) => {
-          if (req.headers[header]) {
-            proxyReq.setHeader(header, req.headers[header]);
-            logger.debug(`Setting header ${header}: ${req.headers[header]}`);
-          }
-        });
+// Helmet: Configuración básica sin CSP que pueda interferir con proxies
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Desactivar CSP para evitar conflictos con proxies
+  })
+);
 
-        // For SSE connections, remove query token to avoid exposing it in logs
-        if (req.query.token) {
-          logger.debug('Removing token from query params before proxying (SSE connection)');
-          // Token already validated by authenticateRequest middleware
-          // and user info is in headers, so we don't need to forward the query param
-        }
+// Compression
+app.use(compression());
 
-        // IMPORTANTE: Reescribir el body porque express.json() ya lo consumió
-        if (req.body && Object.keys(req.body).length > 0) {
-          const bodyData = JSON.stringify(req.body);
+// CORS
+app.use(cors(corsOptions));
 
-          proxyReq.setHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
-          proxyReq.setHeader(HEADER_CONTENT_LENGTH, Buffer.byteLength(bodyData));
+// Parsing del body
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-          proxyReq.write(bodyData);
-        }
+// ============================================
+// MIDDLEWARE DE SPACE (PRICING TOKEN)
+// ============================================
+initSpaceClient({
+  url: process.env.SPACE_URL,
+  apiKey: process.env.SPACE_API_KEY,
+});
+logger.info('🚀 SpaceClient inicializado para Pricing Tokens');
 
-        logger.debug(`Proxy Headers: ${JSON.stringify(req.headers)}`);
-        if (req.body) logger.debug(`Proxy Body: ${JSON.stringify(req.body)}`);
-        logger.debug(`Proxy Query: ${JSON.stringify(req.query)}`);
-        logger.debug(`Proxy Params: ${req.originalUrl}`);
-      },
-      onProxyRes: (proxyRes, req, res) => {
-        // Check if this is an SSE connection (text/event-stream)
-        const isSSE = proxyRes.headers['content-type']?.includes('text/event-stream');
+// ============================================
+// 2. HEALTH CHECK
+// ============================================
 
-        if (isSSE) {
-          // For SSE connections, disable all buffering
-          logger.info(`SSE connection established: ${req.originalUrl}`);
-
-          // Set headers to prevent buffering
-          res.setHeader('Cache-Control', 'no-cache, no-transform');
-          res.setHeader('Connection', 'keep-alive');
-          res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
-
-          // CORS headers for SSE
-          res.setHeader(HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, req.headers.origin || '*');
-          res.setHeader(HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS, 'true');
-
-          // Don't inject pricing token for SSE streams
-          return;
-        }
-
-        // Normal HTTP responses - inject Pricing-Token
-        injectPricingToken(proxyRes, req);
-
-        // Asegurar headers CORS para que el cliente pueda leer el token
-        proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_ORIGIN] = req.headers.origin || '*';
-        proxyRes.headers[HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS] = 'true';
-        proxyRes.headers['Access-Control-Expose-Headers'] = 'Pricing-Token';
-      },
-      onError: (err, req, res) => {
-        logger.error(`Proxy error (${serviceName} Service): ${err.message}`);
-
-        sendError(
-          res,
-          `Service unavailable. Unable to reach ${serviceName.toLowerCase()} service.`,
-          503,
-          {
-            service: serviceName.toLowerCase(),
-            originalError: err.message,
-          }
-        );
-      },
-    })
-  );
-};
-
-/**
- * Configurar rutas de proxy a microservicios.
- */
-export const setupProxyRoutes = (app) => {
-  // Proxy a servicio de usuarios
-  createServiceProxy(app, '/api/v1/auth', services.users.url, 'Users');
-
-  // Proxy a servicio de admin
-  createServiceProxy(app, '/api/v1/admin', services.users.url, 'Admins');
-
-  // Proxy a servicio de perfiles
-  createServiceProxy(app, '/api/v1/profile', services.users.url, 'Profiles');
-
-  // Proxy a servicio de pagos
-  createServiceProxy(app, '/api/v1/payments', services.payments.url, 'Payments');
-
-  // Proxy a servicio de analytics
-  createServiceProxy(app, '/api/v1/analytics', services.analytics.url, 'Analytics');
-
-  // Proxy a servicio de notificaciones
-  createServiceProxy(app, '/api/v1/notifications', services.notifications.url, 'Notifications');
-
-  // Proxy a servicio de beats
-  createServiceProxy(app, '/api/v1/beats', services.beats.url, 'Beats');
-
-  // Proxy a servicio social
-  // /api/v1/social/*  --->  /api/v1/*
-  createServiceProxy(app, '/socket.io', services.social.url, 'Social');
-
-  createServiceProxy(app, '/api/v1/social', services.social.url, 'Social', {
-    '^/api/v1/social': '/api/v1',
-  });
-
-  // 🔥 Proxy a servicio de beats-interactions
-  // /api/v1/beats-interactions/*  --->  /api/v1/*
-  createServiceProxy(
-    app,
-    '/api/v1/beats-interactions',
-    services.beatsInteractions.url,
-    'BeatsInteractions',
+app.get('/health', (req, res) => {
+  logger.info('Health check requested');
+  sendSuccess(
+    res,
     {
-      '^/api/v1/beats-interactions': '/api/v1',
-    }
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+    },
+    'Gateway is healthy'
   );
+});
 
-  logger.info('✅ Proxy routes configured');
+// ============================================
+// SWAGGER UI - DOCUMENTACIÓN API (ahora en /api/v1/docs)
+// ============================================
+
+// Servir archivos estáticos de OAS
+app.use('/api/v1/oas', express.static(path.join(__dirname, 'oas')));
+
+const swaggerOptions = {
+  explorer: true,
+  swaggerOptions: {
+    urls: [
+      { name: 'User & Auth Service', url: '../oas/user-auth.yaml' },
+      { name: 'Payments & Subscriptions', url: '../oas/payments-and-suscriptions.yaml' },
+      { name: 'Analytics & Dashboards', url: '../oas/analytics-and-dashboards.yaml' },
+      { name: 'Beats Upload', url: '../oas/beats-upload.yaml' },
+      { name: 'Beats Interaction', url: '../oas/beats-interaction.yaml' },
+      { name: 'Social Service', url: '../oas/social.yaml' },
+    ],
+  },
+  customSiteTitle: 'Socialbeats API Documentation',
+  customCss: '.swagger-ui .topbar { display: none }', // Opcional: ocultar topbar de Swagger
 };
+
+app.use(
+  '/api/v1/docs',
+  swaggerUi.serveFiles(null, swaggerOptions),
+  swaggerUi.setup(null, swaggerOptions)
+);
+
+// Redirect root a docs
+app.get('/', (req, res) => {
+  res.redirect('/api/v1/docs');
+});
+
+// ============================================
+// 3. AUTENTICACIÓN
+// ============================================
+
+const publicPaths = [
+  '/v1/auth/register',
+  '/v1/auth/login',
+  '/v1/auth/refresh',
+  '/v1/auth/logout',
+  '/v1/auth/2fa/verify',
+  '/v1/profile/internal',
+  '/v1/auth/forgot-password',
+  '/v1/auth/reset-password',
+  '/v1/auth/verify-email',
+  '/v1/auth/resend-verification',
+];
+
+app.use('/api', (req, res, next) => {
+  const isPublic = publicPaths.some((path) => {
+    if (path.includes(':')) {
+      const regexPath = path.replace(/:[^\s/]+/g, '[^/]+');
+      const regex = new RegExp(`^${regexPath}$`);
+      return regex.test(req.path);
+    }
+    return req.path === path || req.path.startsWith(path + '/');
+  });
+
+  if (isPublic) {
+    return next();
+  }
+
+  authenticateRequest(req, res, next);
+});
+
+// ============================================
+// 4. RATE LIMITING
+// ============================================
+
+const rateLimiter = createRateLimiter();
+app.use('/api', rateLimiter);
+
+// ============================================
+// 5. RUTAS DE PROXY
+// ============================================
+
+setupProxyRoutes(app);
+
+// ============================================
+// 6. RUTAS DE AGREGACIÓN
+// ============================================
+
+setupAggregationRoutes(app);
+
+// ============================================
+// 7. MANEJO DE ERRORES
+// ============================================
+
+app.use(errorHandler);
+
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.originalUrl,
+  });
+});
+
+// ============================================
+// 8. INICIAR SERVIDOR
+// ============================================
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.warn(`Using log level: ${process.env.LOG_LEVEL || 'info'}`);
+    logger.info(`🚀 API Gateway running on port ${PORT}`);
+    logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`📚 API Documentation: http://localhost:${PORT}/api/v1/docs`);
+    logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+    logger.info(`🔒 Authentication: ENABLED`);
+    logger.info(`⚡ Rate Limiting: ENABLED`);
+  });
+}
+
+// Manejo de shutdown graceful
+const gracefulShutdown = (signal) => {
+  logger.info(`${signal} signal received: closing HTTP server`);
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+export default app;
