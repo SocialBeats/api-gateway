@@ -1,3 +1,23 @@
+# Release v2.1.0
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: try fix problem with OAS by reverting some changes
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #25 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v2.0.4...v2.1.0).
+
 # Release v2.0.4
 
 ## Features
