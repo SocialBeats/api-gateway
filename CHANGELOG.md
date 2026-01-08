@@ -1,3 +1,23 @@
+# Release v2.0.4
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: remove buggy middleware
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #24 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v2.0.3...v2.0.4).
+
 # Release v2.0.3
 
 ## Features
