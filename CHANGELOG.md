@@ -1,3 +1,23 @@
+# Release v2.0.3
+
+## Features
+No new features.
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+- fix: add relative paths to yamls
+
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #23 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v2.0.2...v2.0.3).
+
 # Release v2.0.2
 
 ## Features
