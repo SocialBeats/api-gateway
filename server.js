@@ -59,13 +59,6 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  // Prefijo externo esperado
-  const forwardedPrefix = req.headers['x-forwarded-prefix'] || '/socialbeats-api';
-  req.publicBasePath = forwardedPrefix;
-  next();
-});
-
 // Compression: Comprime las respuestas HTTP (gzip) para mejorar la velocidad.
 app.use(compression());
 
