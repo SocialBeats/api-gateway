@@ -91,7 +91,6 @@ const swaggerOptions = {
     ],
   },
   customSiteTitle: 'Socialbeats API Documentation',
-  customCss: '.swagger-ui .topbar { display: none }',
 };
 
 app.use(
