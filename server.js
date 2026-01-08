@@ -14,6 +14,7 @@ import { setupAggregationRoutes } from './src/routes/aggregation.js';
 import { errorHandler } from './src/utils/errorHandler.js';
 import { corsOptions } from './src/config/cors.js';
 import { sendSuccess } from './src/utils/response.js';
+import swaggerUi from 'swagger-ui-express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,6 +103,44 @@ const publicPaths = [
   '/v1/auth/verify-email',
   '/v1/auth/resend-verification',
 ];
+
+app.use('/oas', express.static(path.join(__dirname, 'oas')));
+
+app.use(
+  '/',
+  swaggerUi.serve,
+  swaggerUi.setup(null, {
+    swaggerOptions: {
+      urls: [
+        {
+          name: 'User & Auth Service',
+          url: '/oas/user-auth.yaml',
+        },
+        {
+          name: 'Payments & Subscriptions',
+          url: '/oas/payments-and-suscriptions.yaml',
+        },
+        {
+          name: 'Analytics & Dashboards',
+          url: '/oas/analytics-and-dashboards.yaml',
+        },
+        {
+          name: 'Beats Upload',
+          url: '/oas/beats-upload.yaml',
+        },
+        {
+          name: 'Beats Interaction',
+          url: '/oas/beats-interaction.yaml',
+        },
+        {
+          name: 'Social Service',
+          url: '/oas/social.yaml',
+        },
+      ],
+    },
+    customSiteTitle: 'Socialbeats API',
+  })
+);
 
 app.use('/api', (req, res, next) => {
   // Verificar si la ruta es pública

@@ -1,0 +1,577 @@
+openapi: 3.0.0
+info:
+  title: Payments and Subscriptions API
+  version: v1.0.0
+  description: This is the Payments and Subscriptions microservice API for SocialBeats
+servers:
+  - url: https://api.socialbeats.es/socialbeats-api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtenido del endpoint de login
+  responses:
+    UnauthorizedError:
+      description: Token de autenticación faltante o inválido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+paths:
+  /api/v1/about:
+    get:
+      tags:
+        - Documentation
+      summary: Retrieve the entire README file as HTML.
+      description: Reads the entire README file and returns its content as HTML.
+      responses:
+        '200':
+          description: Successfully retrieved the README file content as HTML.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The HTML content of the README file.
+        '500':
+          description: Error reading the README file.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Error message when the file cannot be read.
+                example: 'Error reading the file: [error details]'
+  /api/v1/version:
+    get:
+      tags:
+        - Documentation
+      summary: Retrieve the API version from the .version file.
+      description: >-
+        Reads the .version file and returns its content as part of a JSON
+        message.
+      responses:
+        '200':
+          description: Successfully retrieved the API version.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: The current API version.
+                    example: v1.0.0
+        '500':
+          description: Error reading the .version file.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message summary.
+                    example: There was an error retrieving API version
+                  error:
+                    type: string
+                    description: Detailed error message.
+                    example: 'ENOENT: no such file or directory, open ''.version'''
+  /api/v1/changelog:
+    get:
+      tags:
+        - Documentation
+      summary: Retrieve the API changelog.
+      description: >
+        Reads the `CHANGELOG.md` file, parses its content, and returns it as
+        HTML. Supports filtering by specific versions, multiple versions, or a
+        version range.
+      parameters:
+        - in: query
+          name: versions
+          schema:
+            type: string
+          description: >
+            Comma-separated list of release versions to retrieve (e.g.
+            `v2.1.4,v2.1.2`).
+        - in: query
+          name: from
+          schema:
+            type: string
+          description: >
+            Starting release version for the changelog range (inclusive, e.g.
+            `v2.1.2`).
+        - in: query
+          name: to
+          schema:
+            type: string
+          description: >
+            Ending release version for the changelog range (inclusive, e.g.
+            `v2.1.4`).
+      responses:
+        '200':
+          description: Successfully retrieved the changelog.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: The HTML representation of the changelog or filtered releases.
+        '500':
+          description: Error reading the CHANGELOG.md file.
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Error message when the changelog cannot be read.
+                example: >-
+                  There was an error retrieving API release notes: ENOENT: no
+                  such file or directory, open 'CHANGELOG.md'
+  /api/v1/payments/addons:
+    get:
+      summary: Get all available add-ons
+      description: >-
+        Returns all add-ons. If user is authenticated, filters by plan
+        availability.
+      tags:
+        - AddOns
+      responses:
+        '200':
+          description: List of available add-ons
+  /api/v1/payments/addons/my:
+    get:
+      summary: Get user's add-ons
+      description: Returns active and available add-ons for the authenticated user
+      tags:
+        - AddOns
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User's active and available add-ons
+        '401':
+          description: Not authenticated
+  /api/v1/payments/addons/purchase:
+    post:
+      summary: Purchase an add-on
+      description: Add an add-on to the current subscription
+      tags:
+        - AddOns
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - addonName
+              properties:
+                addonName:
+                  type: string
+                  description: Name of the add-on to purchase
+      responses:
+        '200':
+          description: Add-on purchased successfully
+        '400':
+          description: Invalid add-on or not available for plan
+        '402':
+          description: Payment method required
+  /api/v1/payments/addons/complete-setup:
+    post:
+      summary: Complete add-on purchase after payment setup
+      description: Called after adding a payment method to complete add-on purchase
+      tags:
+        - AddOns
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - addonName
+              properties:
+                addonName:
+                  type: string
+                  description: Name of the add-on being purchased
+      responses:
+        '200':
+          description: Add-on setup completed
+  /api/v1/payments/addons/{addonName}:
+    delete:
+      summary: Cancel an add-on
+      description: Remove an active add-on from the subscription
+      tags:
+        - AddOns
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: addonName
+          required: true
+          schema:
+            type: string
+          description: Name of the add-on to cancel
+      responses:
+        '200':
+          description: Add-on canceled successfully
+        '404':
+          description: Add-on not found or not active
+  /api/v1/health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns basic information to verify that the API is running properly.
+      responses:
+        '200':
+          description: API is healthy and responding.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  message:
+                    type: string
+                    example: Health check successful
+                  version:
+                    type: string
+                    example: 1.0.0
+                  uptime:
+                    type: number
+                    example: 123.45
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2025-11-08T13:41:47.074Z'
+                  environment:
+                    type: string
+                    example: development
+                  db:
+                    type: string
+                    example: connected
+                  kafka:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                      connected:
+                        type: boolean
+  /api/v1/payments/checkout:
+    post:
+      summary: Crear una sesión de checkout de Stripe
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planType
+              properties:
+                planType:
+                  type: string
+                  enum:
+                    - BASIC
+                    - PREMIUM
+                  description: Tipo de plan a contratar (BASIC €0/mes, PREMIUM €10/mes)
+                email:
+                  type: string
+                  format: email
+                  description: Email del usuario (opcional si viene en headers)
+      responses:
+        '200':
+          description: Sesión de checkout creada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  checkoutUrl:
+                    type: string
+                    description: URL de redirección a Stripe Checkout
+                  sessionId:
+                    type: string
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autenticado
+        '409':
+          description: Usuario ya tiene suscripción activa
+        '500':
+          description: Error del servidor
+  /api/v1/payments/subscription:
+    get:
+      summary: Obtener estado de suscripción del usuario
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Estado de suscripción obtenido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  subscription:
+                    type: object
+                    properties:
+                      planType:
+                        type: string
+                      status:
+                        type: string
+                      currentPeriodStart:
+                        type: string
+                        format: date-time
+                      currentPeriodEnd:
+                        type: string
+                        format: date-time
+                      cancelAtPeriodEnd:
+                        type: boolean
+                      isActive:
+                        type: boolean
+        '401':
+          description: No autenticado
+        '404':
+          description: Suscripción no encontrada
+        '500':
+          description: Error del servidor
+    put:
+      summary: Actualizar el plan de suscripción del usuario
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planType
+              properties:
+                planType:
+                  type: string
+                  enum:
+                    - BASIC
+                    - PREMIUM
+                  description: Nuevo tipo de plan (BASIC €0/mes, PREMIUM €10/mes)
+                prorationBehavior:
+                  type: string
+                  enum:
+                    - create_prorations
+                    - none
+                    - always_invoice
+                  default: create_prorations
+                  description: >
+                    Comportamiento del prorrateo:
+
+                    - create_prorations: Crear cargos/créditos prorrateados
+                    (recomendado)
+
+                    - none: Aplicar cambio al inicio del siguiente periodo
+
+                    - always_invoice: Siempre crear factura inmediata
+      responses:
+        '200':
+          description: Plan actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  subscription:
+                    type: object
+                    properties:
+                      planType:
+                        type: string
+                      status:
+                        type: string
+                      currentPeriodStart:
+                        type: string
+                        format: date-time
+                      currentPeriodEnd:
+                        type: string
+                        format: date-time
+                      isActive:
+                        type: boolean
+                  proration:
+                    type: object
+                    properties:
+                      behavior:
+                        type: string
+                      note:
+                        type: string
+        '400':
+          description: Datos inválidos o usuario ya tiene ese plan
+        '401':
+          description: No autenticado
+        '404':
+          description: Suscripción no encontrada
+        '500':
+          description: Error del servidor
+    delete:
+      summary: Cancelar suscripción del usuario y downgrade a FREE
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                immediate:
+                  type: boolean
+                  default: false
+                  description: |
+                    - true: Cancela inmediatamente y crea suscripción FREE
+                    - false: Cancela al final del periodo, luego crea FREE
+      responses:
+        '200':
+          description: Suscripción cancelada y usuario downgradeado a FREE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Subscription canceled and downgraded to FREE plan
+                  subscription:
+                    type: object
+                    properties:
+                      planType:
+                        type: string
+                        example: BASIC
+                      status:
+                        type: string
+                        example: active
+        '401':
+          description: No autenticado
+        '404':
+          description: Suscripción no encontrada
+        '500':
+          description: Error del servidor
+  /api/v1/payments/subscription/complete-upgrade:
+    post:
+      summary: Completar upgrade después de añadir método de pago
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - setupSessionId
+              properties:
+                setupSessionId:
+                  type: string
+                  description: ID de la sesión de setup de Stripe completada
+      responses:
+        '200':
+          description: Upgrade completado exitosamente
+        '400':
+          description: Sesión de setup no completada o datos inválidos
+        '404':
+          description: Suscripción no encontrada
+        '500':
+          description: Error del servidor
+  /api/v1/payments/webhook:
+    post:
+      summary: Webhook de eventos de Stripe
+      tags:
+        - Payments
+      description: Endpoint público para recibir eventos de Stripe (verificado por firma)
+      responses:
+        '200':
+          description: Webhook procesado exitosamente
+        '400':
+          description: Firma inválida o error de procesamiento
+  /api/v1/payments/internal/free-contract:
+    post:
+      summary: Crear un contrato de suscripción gratuito
+      tags:
+        - Payments
+      security:
+        - internalAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - username
+                - plan
+              properties:
+                userId:
+                  type: string
+                  description: ID del usuario
+                username:
+                  type: string
+                  description: Nombre de usuario
+                plan:
+                  type: string
+                  enum:
+                    - BASIC
+                    - PREMIUM
+                  description: Tipo de plan a contratar
+      responses:
+        '200':
+          description: Contrato creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  contract:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      userId:
+                        type: string
+                      username:
+                        type: string
+                      plan:
+                        type: string
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autenticado
+        '500':
+          description: Error del servidor
+tags: []

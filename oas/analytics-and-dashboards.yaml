@@ -1,0 +1,1415 @@
+---
+openapi: 3.1.0
+info:
+  title: FastAPI MongoDB Template
+  description: A production-ready FastAPI + MongoDB template
+  version: 1.0.0
+servers:
+  - url: https://api.socialbeats.es/socialbeats-api
+paths:
+  "/api/v1/analytics/health":
+    get:
+      tags:
+      - health
+      summary: Health Check
+      description: Health check endpoint
+      operationId: health_check_api_v1_analytics_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/kafka/health":
+    get:
+      tags:
+      - health
+      summary: Kafka Health Check
+      description: |-
+        Kafka health check endpoint
+        Verifies whether Kafka is currently reachable and responding
+      operationId: kafka_health_check_api_v1_kafka_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/analytics/dashboards":
+    get:
+      tags:
+      - dashboards
+      summary: List Dashboards
+      description: |-
+        List dashboards
+
+        - Usuarios regulares: Solo ven sus propios dashboards
+        - Admins: Ven todos los dashboards
+
+        El filtrado se hace automáticamente según el rol del usuario autenticado.
+      operationId: list_dashboards_api_v1_analytics_dashboards_get
+      parameters:
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/DashboardResponse"
+                title: Response List Dashboards Api V1 Analytics Dashboards Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    post:
+      tags:
+      - dashboards
+      summary: Create Dashboard
+      description: |-
+        Create a new dashboard
+
+        El owner_id se obtiene automáticamente del usuario autenticado,
+        NO se envía desde el frontend.
+
+        Se verifica que el usuario tenga acceso al beat especificado.
+      operationId: create_dashboard_api_v1_analytics_dashboards_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/DashboardCreate"
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DashboardResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/dashboards/{dashboard_id}":
+    get:
+      tags:
+      - dashboards
+      summary: Get Dashboard
+      operationId: get_dashboard_api_v1_analytics_dashboards__dashboard_id__get
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DashboardResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    put:
+      tags:
+      - dashboards
+      summary: Update Dashboard
+      description: |-
+        Update a dashboard
+
+        - Usuarios regulares: Solo pueden actualizar sus propios dashboards
+        - Admins: Pueden actualizar cualquier dashboard
+
+        La validación de permisos se hace automáticamente.
+      operationId: update_dashboard_api_v1_analytics_dashboards__dashboard_id__put
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/DashboardUpdate"
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DashboardResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    delete:
+      tags:
+      - dashboards
+      summary: Delete Dashboard
+      description: |-
+        Delete a dashboard
+
+        - Usuarios regulares: Solo pueden eliminar sus propios dashboards
+        - Admins: Pueden eliminar cualquier dashboard
+
+        La validación de permisos se hace automáticamente.
+      operationId: delete_dashboard_api_v1_analytics_dashboards__dashboard_id__delete
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/dashboards/{dashboard_id}/withbeat/{beat_id}":
+    delete:
+      tags:
+      - dashboards
+      summary: Delete Dashboard With Beat
+      description: |-
+        Delete a dashboard and its associated beat
+
+        - Usuarios regulares: Solo pueden eliminar sus propios dashboards y beats
+        - Admins: Pueden eliminar cualquier dashboard y beat
+
+        La validación de permisos se hace automáticamente.
+      operationId: delete_dashboard_with_beat_api_v1_analytics_dashboards__dashboard_id__withbeat__beat_id__delete
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      - name: beat_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Beat Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/widgets":
+    get:
+      tags:
+      - widgets
+      summary: Get all widgets
+      description: Retrieve a list of all widgets with optional dashboard filtering
+        and pagination. Widgets are sorted by position (row-major order).
+      operationId: get_widgets_api_v1_analytics_widgets_get
+      parameters:
+      - name: dashboardId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by dashboard ID
+          title: Dashboardid
+        description: Filter by dashboard ID
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of widgets to skip
+          default: 0
+          title: Skip
+        description: Number of widgets to skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          description: Maximum number of widgets to return
+          default: 100
+          title: Limit
+        description: Maximum number of widgets to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/WidgetResponse"
+                title: Response Get Widgets Api V1 Analytics Widgets Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    post:
+      tags:
+      - widgets
+      summary: Create new widget
+      description: Create a new widget with the provided data. User must own the dashboard
+        to add widgets.
+      operationId: create_widget_api_v1_analytics_widgets_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/WidgetCreate"
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/WidgetResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/widgets/{widget_id}":
+    get:
+      tags:
+      - widgets
+      summary: Get widget by ID
+      description: Retrieve a specific widget by its unique identifier
+      operationId: get_widget_api_v1_analytics_widgets__widget_id__get
+      parameters:
+      - name: widget_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Widget Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/WidgetResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    put:
+      tags:
+      - widgets
+      summary: Update widget
+      description: Update an existing widget. User must own the dashboard to update
+        widgets.
+      operationId: update_widget_api_v1_analytics_widgets__widget_id__put
+      parameters:
+      - name: widget_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Widget Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/WidgetUpdate"
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/WidgetResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    delete:
+      tags:
+      - widgets
+      summary: Delete widget
+      description: Delete a widget. User must own the dashboard to delete widgets.
+      operationId: delete_widget_api_v1_analytics_widgets__widget_id__delete
+      parameters:
+      - name: widget_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Widget Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/dashboards/{dashboard_id}/widgets":
+    get:
+      tags:
+      - widgets
+      summary: Get widgets by dashboard
+      description: Retrieve all widgets for a specific dashboard. User must own the
+        dashboard or be an admin.
+      operationId: get_dashboard_widgets_api_v1_analytics_dashboards__dashboard_id__widgets_get
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/WidgetResponse"
+                title: Response Get Dashboard Widgets Api V1 Analytics Dashboards  Dashboard
+                  Id  Widgets Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/beat-metrics":
+    get:
+      tags:
+      - beat_metrics
+      summary: Get all beat metrics
+      description: Retrieve a list of all beat metrics with optional filtering and
+        pagination.
+      operationId: get_beat_metrics_api_v1_analytics_beat_metrics_get
+      parameters:
+      - name: beatId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter by beat ID
+          title: Beatid
+        description: Filter by beat ID
+      - name: skip
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of records to skip
+          default: 0
+          title: Skip
+        description: Number of records to skip
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          description: Maximum number of records to return
+          default: 100
+          title: Limit
+        description: Maximum number of records to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/BeatMetricsResponse"
+                title: Response Get Beat Metrics Api V1 Analytics Beat Metrics Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    post:
+      tags:
+      - beat_metrics
+      summary: Create new beat metrics
+      description: Create a new beat metrics by analyzing an audio file. User must
+        own the beat.
+      operationId: create_beat_metrics_api_v1_analytics_beat_metrics_post
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              "$ref": "#/components/schemas/Body_create_beat_metrics_api_v1_analytics_beat_metrics_post"
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BeatMetricsResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/beat-metrics/{beat_metrics_id}":
+    get:
+      tags:
+      - beat_metrics
+      summary: Get beat metrics by ID
+      description: Retrieve a specific beat metrics by its unique identifier
+      operationId: get_beat_metrics_by_id_api_v1_analytics_beat_metrics__beat_metrics_id__get
+      parameters:
+      - name: beat_metrics_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Beat Metrics Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BeatMetricsResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    put:
+      tags:
+      - beat_metrics
+      summary: Update beat metrics
+      description: Update an existing beat metrics. User must own the beat or be an
+        admin.
+      operationId: update_beat_metrics_api_v1_analytics_beat_metrics__beat_metrics_id__put
+      parameters:
+      - name: beat_metrics_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Beat Metrics Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/BeatMetricsUpdate"
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/BeatMetricsResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+    delete:
+      tags:
+      - beat_metrics
+      summary: Delete beat metrics
+      description: Delete a beat metrics. User must own the beat or be an admin.
+      operationId: delete_beat_metrics_api_v1_analytics_beat_metrics__beat_metrics_id__delete
+      parameters:
+      - name: beat_metrics_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Beat Metrics Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/beat-metrics-status":
+    get:
+      tags:
+      - beat_metrics
+      summary: Get metrics calculation status
+      description: Get the status of metrics calculation for one or more beats (calculating/completed/failed).
+        No auth required.
+      operationId: get_metrics_status_api_v1_analytics_beat_metrics_status_get
+      parameters:
+      - name: beatId
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Single beat ID to check status
+          title: Beatid
+        description: Single beat ID to check status
+      - name: beatIds
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Comma-separated list of beat IDs for batch check
+          title: Beatids
+        description: Comma-separated list of beat IDs for batch check
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/quotable":
+    get:
+      tags:
+      - quotable
+      summary: Get random quote from Quotable API
+      description: |-
+        Get a random inspirational quote from Quotable API.
+
+            Features:
+            - Requires authentication
+            - Global caching: All users share the same quote for 1 hour
+            - Cached quotes served from Redis for performance
+            - Falls back to API if cache unavailable
+            - Rate limiting: 50 requests/minute (authenticated users)
+
+            Response format:
+            ```json
+            {
+                "_id": "quote-id",
+                "content": "Quote text",
+                "author": "Author name",
+                "tags": ["tag1", "tag2"],
+                "authorSlug": "author-slug",
+                "length": 123,
+                "dateAdded": "2021-01-01",
+                "dateModified": "2021-01-01"
+            }
+            ```
+      operationId: get_random_quote_api_v1_analytics_quotable_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Get Random Quote Api V1 Analytics Quotable Get
+  "/api/v1/analytics/translate":
+    post:
+      tags:
+      - translator
+      summary: Translate text using Azure Translator
+      description: |-
+        Translate text from one language to another using Azure Translator API.
+
+            Features:
+            - Requires authentication
+            - Intelligent caching: Translations are cached for 24 hours based on text + language pair
+            - Cached translations served from Redis for performance
+            - Falls back to API if cache unavailable
+            - Rate limiting: 30 requests/minute (authenticated users)
+            - Supports automatic language detection
+            - Returns confidence score for detected language
+
+            Common language codes:
+            - en: English
+            - es: Spanish
+            - fr: French
+            - de: German
+            - it: Italian
+            - pt: Portuguese
+            - zh-Hans: Chinese (Simplified)
+            - ja: Japanese
+            - ar: Arabic
+
+            Response includes:
+            - Original text
+            - Translated text
+            - Source and target language codes
+            - Detected language (useful when source is auto-detected)
+            - Confidence score for language detection
+
+            Error handling:
+            - 429: Quota exceeded - Free tier limit reached or rate limit exceeded.
+                   The API is functioning correctly, please wait or upgrade your plan.
+            - 500: API error or connection issue
+      operationId: translate_text_api_v1_analytics_translate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/TranslationRequest"
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TranslationResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/translate/languages":
+    get:
+      tags:
+      - translator
+      summary: Get supported languages
+      description: |-
+        Get list of all languages supported by Azure Translator.
+
+            Features:
+            - Requires authentication
+            - Cached for 7 days
+            - Returns language codes, names, and native names
+            - Rate limiting: 10 requests/minute
+
+            Response includes translation scope with all supported languages.
+
+            Error handling:
+            - 429: Quota exceeded - Free tier limit reached or rate limit exceeded.
+                   The API is functioning correctly, please wait or upgrade your plan.
+            - 500: API error or connection issue
+      operationId: get_supported_languages_api_v1_analytics_translate_languages_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Get Supported Languages Api V1 Analytics Translate
+                  Languages Get
+  "/api/v1/analytics/translate/quote":
+    post:
+      tags:
+      - translator
+      summary: Translate a Quotable quote to Spanish
+      description: |-
+        Convenience endpoint to translate English quotes (from Quotable API) to Spanish.
+
+            Features:
+            - Requires authentication
+            - Pre-configured for English to Spanish translation
+            - Same caching and rate limiting as standard translate endpoint
+            - Rate limiting: 30 requests/minute
+
+            This endpoint is specifically designed to work with quotes from the Quotable API,
+            automatically translating them from English to Spanish.
+
+            Error handling:
+            - 429: Quota exceeded - Free tier limit reached or rate limit exceeded.
+                   The API is functioning correctly, please wait or upgrade your plan.
+            - 500: API error or connection issue
+      operationId: translate_quote_api_v1_analytics_translate_quote_post
+      parameters:
+      - name: text
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          description: Quote text to translate
+          title: Text
+        description: Quote text to translate
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TranslationResponse"
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/HTTPValidationError"
+  "/api/v1/analytics/metrics-events":
+    get:
+      tags:
+      - events
+      summary: Metrics Events
+      description: |-
+        Server-Sent Events endpoint for real-time beat metrics notifications.
+
+        This endpoint maintains a persistent connection with the client and sends
+        events when beat metrics are completed, eliminating the need for polling.
+
+        Events sent:
+        - METRICS_COMPLETED: When beat metrics calculation is finished
+            Data: { beatId, metricsId, userId }
+
+        Usage in frontend:
+            const eventSource = new EventSource('/api/v1/analytics/metrics-events');
+            eventSource.addEventListener('METRICS_COMPLETED', (e) => {
+                const data = JSON.parse(e.data);
+                console.log('Metrics completed for beat:', data.beatId);
+            });
+      operationId: metrics_events_api_v1_analytics_metrics_events_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/rate-limit-examples/basic":
+    get:
+      tags:
+      - examples_rate_limit
+      summary: Basic Rate Limit Example
+      description: |-
+        Example: Fixed rate limit of 10 requests per minute
+
+        All users (regardless of plan) are limited to 10 req/min
+      operationId: basic_rate_limit_example_api_v1_rate_limit_examples_basic_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/rate-limit-examples/dynamic":
+    get:
+      tags:
+      - examples_rate_limit
+      summary: Dynamic Rate Limit Example
+      description: |-
+        Example: Rate limit for authenticated users
+
+        Authenticated users get 50 requests/min
+      operationId: dynamic_rate_limit_example_api_v1_rate_limit_examples_dynamic_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/rate-limit-examples/strict":
+    get:
+      tags:
+      - examples_rate_limit
+      summary: Strict Rate Limit Example
+      description: |-
+        Example: Strict rate limit for expensive operations
+
+        Use this pattern for:
+        - Data exports
+        - Heavy computations
+        - Resource-intensive operations
+
+        Limited to 5 requests per 15 minutes
+      operationId: strict_rate_limit_example_api_v1_rate_limit_examples_strict_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/rate-limit-examples/multiple":
+    get:
+      tags:
+      - examples_rate_limit
+      summary: Multiple Rate Limits Example
+      description: |-
+        Example: Multiple rate limits on the same endpoint
+
+        Apply both short-term and long-term limits:
+        - 20 requests per minute (prevents burst)
+        - 100 requests per hour (prevents sustained abuse)
+      operationId: multiple_rate_limits_example_api_v1_rate_limit_examples_multiple_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/rate-limit-examples/no-limit":
+    get:
+      tags:
+      - examples_rate_limit
+      summary: No Rate Limit Example
+      description: |-
+        Example: Endpoint exempt from rate limiting
+
+        Use sparingly for:
+        - Health checks
+        - Webhooks
+        - System monitoring endpoints
+      operationId: no_rate_limit_example_api_v1_rate_limit_examples_no_limit_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/api/v1/rate-limit-examples/info":
+    get:
+      tags:
+      - examples_rate_limit
+      summary: Rate Limit Info
+      description: |-
+        Get information about rate limiting for current user
+
+        This endpoint itself is not rate limited (for demo purposes)
+      operationId: rate_limit_info_api_v1_rate_limit_examples_info_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  "/":
+    get:
+      tags:
+      - root
+      summary: Root
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    BeatMetricsResponse:
+      properties:
+        id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id
+          description: Unique identifier for the beat metrics record
+        beatId:
+          type: string
+          title: Beatid
+          description: Unique identifier for the beat
+        coreMetrics:
+          allOf:
+          - "$ref": "#/components/schemas/CoreMetrics"
+          description: Core beat metrics.
+        extraMetrics:
+          allOf:
+          - "$ref": "#/components/schemas/ExtraMetrics"
+          description: Additional beat metrics for extended analysis.
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+          description: Timestamp when the record was created
+        updatedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Updatedat
+          description: Timestamp when the record was last updated
+      type: object
+      required:
+      - beatId
+      - coreMetrics
+      - extraMetrics
+      - createdAt
+      title: BeatMetricsResponse
+      description: Schema for BeatMetrics response.
+      example:
+        beatId: beat_12345
+        coreMetrics:
+          brightness: 0.56
+          density: 7.2
+          dynamism: 0.61
+          energy: 0.83
+          percussiveness: 0.74
+          richness: 0.68
+        createdAt: '2024-01-01T12:00:00Z'
+        extraMetrics:
+          bpm: 122.5
+          groove_index: 0.81
+          key: Am
+          spectral_flux: 0.34
+          stereo_width: 0.65
+    BeatMetricsUpdate:
+      properties:
+        coreMetrics:
+          anyOf:
+          - "$ref": "#/components/schemas/CoreMetrics"
+          - type: 'null'
+          description: Core beat metrics.
+        extraMetrics:
+          anyOf:
+          - "$ref": "#/components/schemas/ExtraMetrics"
+          - type: 'null'
+          description: Additional beat metrics for extended analysis.
+      type: object
+      title: BeatMetricsUpdate
+      description: Schema for updating an existing BeatMetrics record.
+    Body_create_beat_metrics_api_v1_analytics_beat_metrics_post:
+      properties:
+        beatId:
+          type: string
+          title: Beatid
+          description: Unique identifier for the beat
+        audioUrl:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Audiourl
+          description: URL to the audio file (alternative to file upload)
+        audioFile:
+          anyOf:
+          - type: string
+            format: binary
+          - type: 'null'
+          title: Audiofile
+          description: Audio file to analyze
+      type: object
+      required:
+      - beatId
+      title: Body_create_beat_metrics_api_v1_analytics_beat_metrics_post
+    CoreMetrics:
+      properties:
+        energy:
+          type: number
+          title: Energy
+          description: Intensidad sonora general
+        dynamism:
+          type: number
+          title: Dynamism
+          description: Variacion de intensidad en el tiempo
+        percussiveness:
+          type: number
+          title: Percussiveness
+          description: Predominancia de elementos percusivos vs armonicos
+        brigthness:
+          type: number
+          title: Brigthness
+          description: Predominancia de sonidos agudos vs graves
+        density:
+          type: number
+          title: Density
+          description: Cantidad de eventos/ataques por segundo
+        richness:
+          type: number
+          title: Richness
+          description: Complejidad del contenido armónico
+      type: object
+      required:
+      - energy
+      - dynamism
+      - percussiveness
+      - brigthness
+      - density
+      - richness
+      title: CoreMetrics
+    DashboardCreate:
+      properties:
+        name:
+          type: string
+          title: Name
+        beatId:
+          type: string
+          title: Beatid
+      type: object
+      required:
+      - name
+      - beatId
+      title: DashboardCreate
+    DashboardResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        ownerId:
+          type: string
+          title: Ownerid
+        beatId:
+          type: string
+          title: Beatid
+        name:
+          type: string
+          title: Name
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+        updatedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Updatedat
+      type: object
+      required:
+      - id
+      - ownerId
+      - beatId
+      - name
+      - createdAt
+      title: DashboardResponse
+    DashboardUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+      type: object
+      title: DashboardUpdate
+    ExtraMetrics:
+      properties:
+        bpm:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Bpm
+          description: Beats por minuto
+        num_beats:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Num Beats
+          description: Numero total de beats detectados
+        mean_duration:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Mean Duration
+          description: Duracion promedio entre beats en segundos
+        beats_position:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Beats Position
+          description: Posiciones de los beat en la estructura rítmica
+        key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key
+          description: Tonalidad musical (ej. C, D#, Fm)
+        uniformity:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Uniformity
+          description: Uniformidad tonal, medida de estabilidad tonal
+        stability:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Stability
+          description: Estabilidad tonal a lo largo del track
+        chroma_features:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Chroma Features
+          description: Características cromáticas detalladas
+        decibels:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Decibels
+          description: Nivel de potencia sonora en decibeles (dB)
+        hz_range:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Hz Range
+          description: Rango de frecuencias melodicas en Hz
+        mean_hz:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Mean Hz
+          description: Frecuencia melodica promedio en Hz
+        character:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Character
+          description: Caracter de la textura sonora (ej. suave, rugosa)
+        opening:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Opening
+          description: Medida de apertura en la textura sonora
+        style:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Style
+          description: Estilo de articulacion (ej. legato, staccato)
+        suddent_changes:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Suddent Changes
+          description: Número de cambios repentinos en la articulacion
+        soft_changes:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Soft Changes
+          description: Número de cambios suaves en la articulacion
+        ratio_sudden_soft:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Ratio Sudden Soft
+          description: Ratio entre cambios repentinos y suaves en la articulacion
+      type: object
+      title: ExtraMetrics
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            "$ref": "#/components/schemas/ValidationError"
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    TranslationRequest:
+      properties:
+        text:
+          type: string
+          maxLength: 10000
+          minLength: 1
+          title: Text
+          description: Text to translate
+        target_language:
+          type: string
+          title: Target Language
+          description: Target language code (e.g., 'es', 'fr', 'de')
+          default: es
+        source_language:
+          type: string
+          title: Source Language
+          description: Source language code (e.g., 'en', 'es', 'fr')
+          default: en
+      type: object
+      required:
+      - text
+      title: TranslationRequest
+      description: Request model for translation
+    TranslationResponse:
+      properties:
+        original_text:
+          type: string
+          title: Original Text
+        translated_text:
+          type: string
+          title: Translated Text
+        source_language:
+          type: string
+          title: Source Language
+        target_language:
+          type: string
+          title: Target Language
+        detected_language:
+          type: string
+          title: Detected Language
+        confidence:
+          type: number
+          title: Confidence
+      type: object
+      required:
+      - original_text
+      - translated_text
+      - source_language
+      - target_language
+      - detected_language
+      - confidence
+      title: TranslationResponse
+      description: Response model for translation
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    WidgetCreate:
+      properties:
+        dashboardId:
+          type: string
+          title: Dashboardid
+          description: Dashboard identifier
+        metricType:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Metrictype
+          description: Widget metric type (e.g., WEATHER_FORECAST, CHART_ID)
+      type: object
+      required:
+      - dashboardId
+      - metricType
+      title: WidgetCreate
+      description: Schema for creating a new Widget
+    WidgetResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: Widget unique identifier (MongoDB ObjectId)
+        createdAt:
+          type: string
+          format: date-time
+          title: Createdat
+          description: Creation timestamp
+        updatedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Updatedat
+          description: Last update timestamp
+        metricType:
+          type: string
+          title: Metrictype
+          description: Widget metric type
+      type: object
+      required:
+      - id
+      - createdAt
+      - metricType
+      title: WidgetResponse
+      description: Schema for Widget response with metadata
+      example:
+        createdAt: '2024-01-01T00:00:00'
+        dashboardId: 507f191e810c19729de860ea
+        id: 507f1f77bcf86cd799439011
+        metricType: BPM
+    WidgetUpdate:
+      properties:
+        dashboardId:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dashboardid
+        metricType:
+          anyOf:
+          - type: string
+            maxLength: 100
+            minLength: 1
+          - type: 'null'
+          title: Metrictype
+      type: object
+      title: WidgetUpdate
+      description: Schema for updating an existing Widget (all fields optional)
