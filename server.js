@@ -82,12 +82,12 @@ const swaggerOptions = {
   explorer: true,
   swaggerOptions: {
     urls: [
-      { name: 'User & Auth Service', url: '/api/v1/oas/user-auth.yaml' },
-      { name: 'Payments & Subscriptions', url: '/api/v1/oas/payments-and-suscriptions.yaml' },
-      { name: 'Analytics & Dashboards', url: '/api/v1/oas/analytics-and-dashboards.yaml' },
-      { name: 'Beats Upload', url: '/api/v1/oas/beats-upload.yaml' },
-      { name: 'Beats Interaction', url: '/api/v1/oas/beats-interaction.yaml' },
-      { name: 'Social Service', url: '/api/v1/oas/social.yaml' },
+      { name: 'User & Auth Service', url: '../oas/user-auth.yaml' },
+      { name: 'Payments & Subscriptions', url: '../oas/payments-and-suscriptions.yaml' },
+      { name: 'Analytics & Dashboards', url: '../oas/analytics-and-dashboards.yaml' },
+      { name: 'Beats Upload', url: '../oas/beats-upload.yaml' },
+      { name: 'Beats Interaction', url: '../oas/beats-interaction.yaml' },
+      { name: 'Social Service', url: '../oas/social.yaml' },
     ],
   },
   customSiteTitle: 'Socialbeats API Documentation',
