@@ -1,3 +1,24 @@
+# Release v2.0.0
+
+## Features
+- feat: add swagger section with multi oas selecction
+- feat: add microservices oas
+
+## Tests
+No test changes.
+## Documentation
+No documentation changes.
+## Fixes
+No fixes added.
+## Continuous integration (CI)
+No CI changes.
+## Other changes
+- Merge pull request #20 from SocialBeats/develop
+
+## Full commit history
+
+For full commit history, see [here](https://github.com/SocialBeats/api-gateway/compare/v1.2.0...v2.0.0).
+
 # Release v1.2.0
 
 ## Features
